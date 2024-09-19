@@ -1,6 +1,22 @@
 import os
+from typing import List, Dict
+
 from dotenv import load_dotenv
 from github import Auth, Github
+from github.PaginatedList import PaginatedList
+
+
+def parse_issues(issues: PaginatedList):
+    max_issue_number: int = 210000
+    parsed_issues: List[Dict] = []
+    for issue in issues:
+        if issue.number > max_issue_number:
+            continue
+        if len(issue.assignees) > 1:
+            continue
+        parsed_issues.append(issue.raw_data)
+        pass
+    return
 
 
 def main():
@@ -12,10 +28,7 @@ def main():
 
     issues = repo.get_issues(state='closed')
 
-    for issue in issues:
-        print(issue)
-        if issue.number < 100:
-            print(f"Issue ID: {issue.number}, Title: {issue.title}, State: {issue.state}")
+    parse_issues(issues)
     
 
 if __name__ == "__main__":
