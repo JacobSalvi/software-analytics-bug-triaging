@@ -28,3 +28,4 @@ Create a token on github and fill the .env as follows.
 ```shell
 GITHUB_TOKEN=<TOKEN>
 ```
+
