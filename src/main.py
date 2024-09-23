@@ -16,14 +16,11 @@ def parse_issues(issues: PaginatedList):
         page_issues = issues.get_page(current_page)
         if len(page_issues) == 0:
             break
-        # issues_to_keep = [issue.raw_data for issue in page_issues
-        #                   if issue.number <=max_issue_number
-        #                   and len(issue.assignees) == 1]
-        issues_to_keep = [i.raw_data for i in page_issues]
+        issues_to_keep = [issue.raw_data for issue in page_issues
+                          if issue.number <=max_issue_number
+                          and len(issue.assignees) == 1]
         current_page += 1
         parsed_issues.extend(issues_to_keep)
-        if len(parsed_issues) > 0:
-            break
     return parsed_issues
 
 
