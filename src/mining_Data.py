@@ -1,8 +1,10 @@
+import os
+
 import requests
 import json
 
 username = 'norma1guy'
-token = ''
+token = os.getenv("GITHUB_TOKEN")
 header = {
     "Authorization" : f"token {token}",
     "Accept": "application/vnd.github.v3+json"
