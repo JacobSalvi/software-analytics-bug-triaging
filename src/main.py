@@ -1,46 +1,63 @@
+import argparse
 import os
 from pathlib import Path
 from typing import List, Dict
 
+import requests
 from dotenv import load_dotenv
-from github import Auth, Github
-from github.PaginatedList import PaginatedList
 import pandas as pd
-
-
-def parse_issues(issues: PaginatedList):
-    max_issue_number: int = 210000
-    parsed_issues: List[Dict] = []
-    current_page = 0
-    while True:
-        page_issues = issues.get_page(current_page)
-        if len(page_issues) == 0:
-            break
-        issues_to_keep = [issue.raw_data for issue in page_issues
-                          if issue.number <=max_issue_number
-                          and len(issue.assignees) == 1]
-        current_page += 1
-        parsed_issues.extend(issues_to_keep)
-    return parsed_issues
 
 
 def get_output() -> Path:
     return Path(__file__).parents[1].joinpath('output')
 
 
-def main():
-    load_dotenv()
-    github_token = os.getenv("GITHUB_TOKEN")
-    auth = Auth.Token(github_token)
-    github = Github(auth=auth, per_page=1000)
-    repo = github.get_repo("microsoft/vscode")
+def get_issues_raw_request(token, start_page=0) -> List[Dict]:
+    payload = {}
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+    max_issue_number: int = 220000
+    parsed_issues: List[Dict] = []
+    current_page = start_page
+    try:
+        while True:
+            print(f"Current page is {current_page}")
+            url = f"https://api.github.com/repos/microsoft/vscode/issues?state=closed&page={current_page}&per_page=100&direction=asc"
+            response = requests.request("GET", url, headers=headers, data=payload)
+            if response.status_code != 200:
+                print(f"Status code {response.status_code} for page {current_page}")
+                break
+            issues = response.json()
+            if len(issues) == 0:
+                break
+            issues_to_keep = [issue for issue in issues if issue["number"] <= max_issue_number
+                              and len(issue["assignees"]) == 1]
+            max_number = max([issue["number"] for issue in issues])
+            if max_number > max_issue_number:
+                break
+            current_page += 1
+            parsed_issues.extend(issues_to_keep)
+    except Exception as e:
+        print(f"Exception {e}")
+        return parsed_issues
+    return parsed_issues
 
-    issues = repo.get_issues(state='closed', sort="asc")
+
+def main():
+    argument_parser = argparse.ArgumentParser("Perform github requests")
+    argument_parser.add_argument("--starting-page", dest="start_page",type=int, default=0)
+    args = argument_parser.parse_args()
+    starting_page = args.start_page
     output = get_output()
     if not output.is_dir():
         output.mkdir()
+    load_dotenv()
+    github_token = os.getenv("GITHUB_TOKEN")
+
     parsed_csv = output.joinpath("parsed_issues.csv")
-    parsed_issues = parse_issues(issues)
+    parsed_issues = get_issues_raw_request(github_token, starting_page)
+
     df = pd.DataFrame(parsed_issues)
     df.to_csv(parsed_csv, index=False)
     
