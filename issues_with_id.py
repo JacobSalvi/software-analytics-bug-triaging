@@ -72,7 +72,7 @@ def get_issues_with_one_assignee():
 
     return issues_with_one_assignee
 
-def to_json(issues, filename="issues_with_one_assignee.json"):
+def to_json(issues, filename="issues_with_id.json"):
     with open(filename, 'w') as file:
         json.dump(issues, file, indent=4)
     print(f"Saved {len(issues)} issues to {filename}")
