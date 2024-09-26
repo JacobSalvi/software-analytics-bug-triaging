@@ -1,10 +1,20 @@
+import argparse
+import re
+from pathlib import Path
 from typing import AnyStr
 import nltk
 import marko
 import marko.inline
 import marko.md_renderer
+import pandas as pd
+import demoji
+
+
 
 def standardize_string(text: AnyStr) -> AnyStr:
+    text = demoji.replace(text, repl="")
+    html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+    text= re.sub(html_tags_regex, '', text)
     tokenized_text = nltk.word_tokenize(text)
     stopwords = nltk.corpus.stopwords.words('english')
     words = [word for word in tokenized_text if word not in stopwords]
@@ -20,9 +30,14 @@ def download_necessary_nltk_data():
 
 
 def clean_text(block: marko.block.BlockElement):
+    if isinstance(block, str):
+        return
     for child in block.children:
+        if isinstance(child, marko.inline.InlineHTML):
+            block.children.remove(child)
+            continue
         if isinstance(child, marko.inline.RawText):
-            child.children = f" {standardize_string(child.children)} "
+            child.children = f"{standardize_string(child.children)}"
         else:
             clean_text(child)
     return
