@@ -10,7 +10,6 @@ import pandas as pd
 import demoji
 
 
-
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
@@ -21,7 +20,6 @@ def standardize_string(text: AnyStr) -> AnyStr:
     stemmer = nltk.stem.PorterStemmer()
     stemmed_words = [stemmer.stem(word=word, to_lowercase=True) for word in words]
     return " ".join(stemmed_words)
-
 
 
 def download_necessary_nltk_data():
@@ -42,8 +40,11 @@ def clean_text(block: marko.block.BlockElement):
             clean_text(child)
     return
 
+
 def parse_markdown(text: AnyStr) -> AnyStr:
     md_parser = marko.parser.Parser()
+    if text is None:
+        return ""
     ast = md_parser.parse(text)
     for child in ast.children:
         if isinstance(child, marko.block.Heading):
@@ -58,17 +59,42 @@ def parse_markdown(text: AnyStr) -> AnyStr:
     return renderer.render(ast)
 
 
+def remove_pull_request(df: pd.DataFrame) -> pd.DataFrame:
+    return df[~df['pull_request'].notnull()]
+
+
+def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
+    df['body'] = df['body'].apply(parse_markdown)
+    df['title'] = df['title'].apply(parse_markdown)
+    return df
+
+
+def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
+    return df.loc[:, ['url', 'title', 'body']]
+
+
+def store_processed_data(df: pd.DataFrame, output_path: str):
+    df.to_csv(output_path, index=False)
+
+
+def data_slicer(df: pd.DataFrame, size: int) -> pd.DataFrame:
+    return df.sample(n=size)
+
 
 def main():
-    sentence = ["program", "programs", "programmer", "Programming", "programmers"]
-    sentence = " ".join(sentence)
     download_necessary_nltk_data()
-    print(standardize_string(sentence))
-    f = open("../example2.md")
-    content = f.read()
-    cleaned_markdown = parse_markdown(content)
-    f = open("../robe.md", 'w')
-    f.write(cleaned_markdown)
+    parser = argparse.ArgumentParser("CleanUpIssues")
+    parser.add_argument("--file", type=Path, required=True)
+    parser.add_argument("--output", default='../output/cleaned_data.csv', type=Path, required=False)
+    args = parser.parse_args()
+    input_file: Path = args.file
+    df = pd.read_json(input_file, lines=True)
+    df = data_slicer(df, 100)
+    df = remove_pull_request(df)
+    df = pick_columns(df)
+    columns_parsing(df)
+    store_processed_data(df, args.output)
+
 
 if __name__ == '__main__':
     main()
