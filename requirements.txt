@@ -1,0 +1,6 @@
+pygithub==2.4.0
+python-dotenv~=1.0.1
+pandas~=2.2.3
+requests~=2.32.3
+nltk~=3.9.1
+marko~=2.1.2
