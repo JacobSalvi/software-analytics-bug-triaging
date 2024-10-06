@@ -10,6 +10,14 @@ import pandas as pd
 import demoji
 
 
+class MdRenderer(marko.md_renderer.MarkdownRenderer):
+    def render_emphasis(self, element: marko.inline.Emphasis) -> str:
+        return f" *{self.render_children(element)}* "
+
+    def render_strong_emphasis(self, element: marko.inline.StrongEmphasis) -> str:
+        return f" **{self.render_children(element)}** "
+
+
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
@@ -34,6 +42,15 @@ def clean_text(block: marko.block.BlockElement):
         if isinstance(child, marko.inline.InlineHTML):
             block.children.remove(child)
             continue
+        if isinstance(child, marko.inline.Image):
+            block.children.remove(child)
+            continue
+        if isinstance(child, marko.inline.Link):
+            block.children.remove(child)
+            continue
+        if isinstance(child, marko.inline.AutoLink):
+            block.children.remove(child)
+            continue
         if isinstance(child, marko.inline.RawText):
             child.children = f"{standardize_string(child.children)}"
         else:
@@ -55,7 +72,7 @@ def parse_markdown(text: AnyStr) -> AnyStr:
             clean_text(child)
         if isinstance(child, marko.block.CodeBlock):
             pass
-    renderer = marko.md_renderer.MarkdownRenderer()
+    renderer = MdRenderer()
     return renderer.render(ast)
 
 
