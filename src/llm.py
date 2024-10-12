@@ -1,11 +1,8 @@
 from transformers import RobertaTokenizer, RobertaModel
 import torch
-import numpy as np
-import pandas as pd
 import plotly.express as px
 from sklearn.decomposition import PCA
 import pandas as pd
-import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from nltk.corpus import stopwords
