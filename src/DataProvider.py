@@ -45,21 +45,18 @@ class DataProvider:
         """
         json_data = []
 
-        # Check if the tar.gz file exists
         if not Path(tar_gz_file).exists():
             raise FileNotFoundError(f"The file {tar_gz_file} does not exist")
 
-        # Open the tar.gz archive
         with tarfile.open(tar_gz_file, "r:gz") as tar:
-            # Loop through the files in the archive and find the first .json file
+
             for member in tar.getmembers():
-                if member.name.endswith(".json"):  # Only consider files that end with .json
+                if member.name.endswith(".json"):
                     with tar.extractfile(member) as f:
                         if f:
-                            # Read line by line to handle NDJSON (newline-delimited JSON)
                             for line in f:
                                 json_data.append(json.loads(line.decode('utf-8')))
-                    break  # Stop after the first .json file is found and extracted
+                    break
 
         if not json_data:
             raise FileNotFoundError(f"No JSON file was found in {tar_gz_file}")

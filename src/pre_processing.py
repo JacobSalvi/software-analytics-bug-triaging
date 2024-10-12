@@ -96,16 +96,11 @@ def data_slicer(df: pd.DataFrame, size: int) -> pd.DataFrame:
 
 def process_data(input_file: Path, output_path: Path):
     download_necessary_nltk_data()
-
-    # Check if input_file is provided, otherwise use the raw JSON data
     if input_file is not None:
-        df = pd.read_json(input_file, lines=True)  # This is for file-based input
+        df = pd.read_json(input_file, lines=True)
     else:
-        # If get_raw() returns a list of JSON objects, use pd.DataFrame()
         raw_data = DataProvider.get_raw()
         df = pd.DataFrame(raw_data)
-
-    # Proceed with the remaining processing steps
     df = remove_pull_request(df)
     df = pick_columns(df)
     columns_parsing(df)
