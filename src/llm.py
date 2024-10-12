@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from nltk.corpus import stopwords
+from src.DataProvider import DataProvider
 
 
 def stopRemoval(issues):
@@ -14,8 +15,8 @@ def stopRemoval(issues):
     return issues
 
 def load_issues() :
-    issues = pd.read_json("parsed_issues.json",lines=True)
-    issues = stopRemoval(issues)
+    issues = DataProvider.get_parsed()
+    #issues = stopRemoval(issues)
     bug_reports = issues["title"].head(1000).tolist()
     return bug_reports
 
