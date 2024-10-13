@@ -102,9 +102,9 @@ class DataHandler:
         """
         with tarfile.open(output_filename, "w:gz") as tar:
             tarinfo = tarfile.TarInfo(name=file_name)
-            file_obj.seek(0, io.SEEK_END)  # Get the size of the file
+            file_obj.seek(0, io.SEEK_END)
             tarinfo.size = file_obj.tell()
-            file_obj.seek(0)  # Reset buffer position to the beginning
+            file_obj.seek(0)
             tar.addfile(tarinfo, file_obj)
 
         return output_filename

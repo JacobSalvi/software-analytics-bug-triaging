@@ -11,7 +11,7 @@ import pandas as pd
 import demoji
 import swifter #do not remove!
 from pandas.core.interchange.dataframe_protocol import DataFrame
-from src.processing.assignees_processing import format_assignees
+from src.processing.assignees_processing import  filter_assignee_data
 
 
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
@@ -100,7 +100,7 @@ def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.loc[:, ['id', 'url', 'title', 'body','assignee', 'assignees']]
+    return df.loc[:, ['id', 'url', 'title', 'body','assignee']]
 
 def store_processed_data(df: pd.DataFrame, output_path: Path):
     df.to_csv(output_path, index=False)
@@ -115,14 +115,12 @@ def process_input(input_file: Path, output_path: Path, compressed: bool = False)
     df = process_data(df)
     store_processed_data(df, output_path)
 
-
 def process_data(df: DataFrame):
     download_necessary_nltk_data()
-    df = data_slicer(df, 1000)
     df = remove_pull_request(df)
     df = pick_columns(df)
     df = columns_parsing(df)
-    df = format_assignees(df)
+    df = filter_assignee_data(df)
     return df
 
 def main():
