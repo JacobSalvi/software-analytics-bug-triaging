@@ -11,3 +11,6 @@ plotly~=5.24.1
 transformers~=4.45.2
 scikit-learn~=1.5.2
 swifter~=1.4.0
+joblib~=1.4.2
+tqdm~=4.66.5
+sympy~=1.13.3

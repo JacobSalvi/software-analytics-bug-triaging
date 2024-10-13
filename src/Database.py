@@ -1,3 +1,5 @@
+import ast
+
 import pandas as pd
 
 from src.DataHandler import DataHandler
@@ -34,34 +36,44 @@ class Database:
     def get_test_set() -> pd.DataFrame:
         df = Database.get_issues()
         test_set_df = df[
-            (df['id'] >= 210001) &
-            (df['id'] <= 220000)]
+            (df['number'] >= 200000) &
+            (df['number'] <= 220000)
+        ]
         if test_set_df.empty:
-            raise ValueError("No issues found in the test set with the given criteria")
+            raise ValueError("Empty test set")
         return test_set_df
 
     @staticmethod
     def get_train_set() -> pd.DataFrame:
         df = Database.get_issues()
-        train_set__df = df[~((df['id'] >= 210001) & (df['id'] <= 220000))]
+        train_set__df = df[~((df['number'] >= 210001) & (df['number'] <= 220000))]
         if train_set__df.empty:
-            raise ValueError("No issues found in the test set with the given criteria.")
+            raise ValueError("Empty train set")
         return train_set__df
 
     @staticmethod
     def get_recent_instances() -> pd.DataFrame:
         df = Database.get_issues()
         recent_instances_df = df[
-            (df['id'] >= 190000) &
-            (df['id'] <= 210000)
+            (df['number'] >= 190000) &
+            (df['number'] <= 210000)
         ]
-
         if recent_instances_df.empty:
-            raise ValueError("No recent instances found with the given criteria.")
-
+            raise ValueError("Empty recent instances set")
         return recent_instances_df
 
 
 if __name__ == '__main__':
-    print(Database.get_issues_by_id(752417277))
-    print(f"Number of rows: {Database.get_test_set().shape[0]}")
+    def get_assignee_ids(df):
+        return [
+            assignee.get('id') if isinstance(assignee := ast.literal_eval(assignee_str), dict) else None
+            for assignee_str in df['assignee']
+        ]
+
+
+    df = get_assignee_ids(Database.get_issues())
+    pass
+
+    #print(Database.get_issues_by_id(220000))
+
+

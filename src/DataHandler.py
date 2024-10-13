@@ -1,30 +1,23 @@
 import json
+import os
 import tarfile
 from pathlib import Path
 import io
 
 import pandas as pd
 from pandas import DataFrame
+from sympy import false
 
 from src.processing.issues_processing import process_data
 
 
 class DataHandler:
-    PARSED_TAR_GZ_FILE_PATH = '../data/cleaned_parsed_issues.tar.gz'
-
-    TAR_GZ_FILE_1 = '../data/raw_parsed_issues_1.tar.gz'
-    TAR_GZ_FILE_2 = '../data/raw_parsed_issues_2.tar.gz'
-
+    PARSED_TAR_GZ_FILE_PATH = Path(__file__).parent / '../data/cleaned_parsed_issues.tar.gz'
+    TAR_GZ_FILE_1 = Path(__file__).parent / '../data/raw_parsed_issues_1.tar.gz'
+    TAR_GZ_FILE_2 = Path(__file__).parent / '../data/raw_parsed_issues_2.tar.gz'
 
     @staticmethod
     def get_raw() -> list:
-        """
-        Reads the JSON content from two specified JSON files compressed in two separate tar.gz archives
-        and returns the combined list of JSON objects.
-
-        Returns:
-        - A list containing the combined data from both files.
-        """
         combined_data = []
 
         combined_data.extend(
@@ -35,16 +28,7 @@ class DataHandler:
         return combined_data
 
     @staticmethod
-    def extract_json_from_tar(tar_gz_file: str) -> list:
-        """
-        Extracts the first JSON file (NDJSON format) from a specified tar.gz archive and returns the content as a list of JSON objects.
-
-        Parameters:
-        - tar_gz_file: The path to the tar.gz archive.
-
-        Returns:
-        - A list of JSON objects from the first JSON file found in the tar.gz.
-        """
+    def extract_json_from_tar(tar_gz_file: Path) -> list:
         json_data = []
 
         if not Path(tar_gz_file).exists():
@@ -66,8 +50,9 @@ class DataHandler:
         return json_data
 
     @staticmethod
-    def get_parsed() -> DataFrame:
-        """Extracts and reads the single CSV file from a tar.gz archive and returns it as a DataFrame"""
+    def get_parsed(force_parse: bool = false) -> DataFrame:
+        if force_parse and Path(DataHandler.PARSED_TAR_GZ_FILE_PATH).exists():
+            os.remove(DataHandler.PARSED_TAR_GZ_FILE_PATH)
 
         if not Path(DataHandler.PARSED_TAR_GZ_FILE_PATH).exists():
             df = process_data(pd.DataFrame(DataHandler.get_raw()))
@@ -75,7 +60,7 @@ class DataHandler:
             # Convert DataFrame to CSV in memory using BytesIO
             csv_buffer = io.BytesIO()
             df.to_csv(csv_buffer, index=False)
-            csv_buffer.seek(0)  # Reset buffer position to the beginning
+            csv_buffer.seek(0)
 
             DataHandler.compress_file_to_tar_gz(
                 DataHandler.PARSED_TAR_GZ_FILE_PATH,
@@ -97,9 +82,6 @@ class DataHandler:
 
     @staticmethod
     def compress_file_to_tar_gz(output_filename, file_obj, file_name):
-        """
-        Compresses a single file-like object into a tar.gz archive.
-        """
         with tarfile.open(output_filename, "w:gz") as tar:
             tarinfo = tarfile.TarInfo(name=file_name)
             file_obj.seek(0, io.SEEK_END)
@@ -111,4 +93,4 @@ class DataHandler:
 
 
 if __name__ == '__main__':
-    DataHandler.get_parsed()
+    DataHandler.get_parsed(True)

@@ -100,7 +100,7 @@ def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.loc[:, ['id', 'url', 'title', 'body','assignee']]
+    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee']]
 
 def store_processed_data(df: pd.DataFrame, output_path: Path):
     df.to_csv(output_path, index=False)
@@ -125,7 +125,7 @@ def process_data(df: DataFrame):
 
 def main():
     download_necessary_nltk_data()
-    parser = argparse.ArgumentParser("CleanUpIssues")
+    parser = argparse.ArgumentParser("Clean up issues")
     parser.add_argument("--file", type=Path, required=True, help="Path to the raw json data")
     parser.add_argument("--output", default='../data/cleaned_parsed_issues.csv', type=Path, required=False,  help="Path to the output json data")
     args = parser.parse_args()
