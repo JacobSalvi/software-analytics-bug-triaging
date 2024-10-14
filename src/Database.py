@@ -1,7 +1,4 @@
-import ast
-
 import pandas as pd
-
 from src.DataHandler import DataHandler
 
 
@@ -61,19 +58,3 @@ class Database:
         if recent_instances_df.empty:
             raise ValueError("Empty recent instances set")
         return recent_instances_df
-
-
-if __name__ == '__main__':
-    def get_assignee_ids(df):
-        return [
-            assignee.get('id') if isinstance(assignee := ast.literal_eval(assignee_str), dict) else None
-            for assignee_str in df['assignee']
-        ]
-
-
-    df = get_assignee_ids(Database.get_issues())
-    pass
-
-    #print(Database.get_issues_by_id(220000))
-
-

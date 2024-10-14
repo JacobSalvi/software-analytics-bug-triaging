@@ -1,18 +1,16 @@
-import argparse
 import ast
 from pathlib import Path
 
+from numpy import floating
 from sympy.codegen import Print
 from src.Database import Database
-import os
 import pandas as pd
 import numpy as np
 from transformers import RobertaTokenizer, RobertaModel
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
-from sklearn.exceptions import NotFittedError
-from typing import List
+from typing import List, Any
 import joblib
 from tqdm import tqdm
 
@@ -20,24 +18,21 @@ from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 
 class Predictor:
-    MODEL_DIR = Path(__file__).parent.resolve() / "../../models"
-    CLASSIFIER_PATH = os.path.join(MODEL_DIR, 'classifier.joblib')
-    LABEL_ENCODER_PATH = os.path.join(MODEL_DIR, 'label_encoder.joblib')
-    TOKENIZER_PATH = os.path.join(MODEL_DIR, 'tokenizer')
-    ROBERTA_MODEL_PATH = os.path.join(MODEL_DIR, 'roberta-model')
-
-    def __init__(self, model_dir: Path = None, use_gpu: bool = True):
-        if model_dir is not None:
-            self.MODEL_DIR = model_dir
-        os.makedirs(self.MODEL_DIR, exist_ok=True)
+    def __init__(self, model_dir: Path, use_gpu: bool = True):
+        self._model_dir = model_dir
+        model_dir.mkdir(exist_ok=True)
+        self._classifier_path = model_dir.joinpath('classifier.joblib')
+        self._label_encoder_path = model_dir.joinpath('label_encoder.joblib')
+        self._tokenizer_path = model_dir.joinpath('tokenizer')
+        self._roberta_model_path = model_dir.joinpath('roberta-model')
 
         self.device = torch.device('cuda' if torch.cuda.is_available() and use_gpu else 'cpu')
         print(f"Using device: {self.device}")
 
         # Initialize tokenizer and model
-        if os.path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
-            self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
-            self.model = RobertaModel.from_pretrained(self.ROBERTA_MODEL_PATH)
+        if self._tokenizer_path.exists() and self._roberta_model_path.exists():
+            self.tokenizer = RobertaTokenizer.from_pretrained(self._tokenizer_path  )
+            self.model = RobertaModel.from_pretrained(self._roberta_model_path)
             self.model.to(self.device)
             print("Loaded tokenizer and RoBERTa model from disk")
         else:
@@ -51,10 +46,11 @@ class Predictor:
         self.classifier = LogisticRegression(max_iter=1000)
 
         # Load classifier and label encoder if exists
-        if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
+        if self._classifier_path.exists() and self._label_encoder_path.exists():
             self.load_models()
 
-    def preprocess_text(self, text: str) -> str:
+    @staticmethod
+    def preprocess_text(text: str) -> str:
         return text.lower().strip()
 
     def get_embeddings(self, texts: List[str], batch_size: int = 16) -> np.ndarray:
@@ -105,27 +101,27 @@ class Predictor:
         self.save_models()
 
     def save_models(self):
-        joblib.dump(self.classifier, self.CLASSIFIER_PATH)
-        joblib.dump(self.label_encoder, self.LABEL_ENCODER_PATH)
+        joblib.dump(self.classifier, self._classifier_path)
+        joblib.dump(self.label_encoder, self._label_encoder_path)
 
-        self.tokenizer.save_pretrained(self.TOKENIZER_PATH)
-        self.model.save_pretrained(self.ROBERTA_MODEL_PATH)
-        print(f"Models saved to {self.MODEL_DIR}")
+        self.tokenizer.save_pretrained(self._tokenizer_path)
+        self.model.save_pretrained(self._roberta_model_path)
+        print(f"Models saved to {self._model_dir}")
 
     def load_models(self):
-        if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
-            self.classifier = joblib.load(self.CLASSIFIER_PATH)
-            self.label_encoder = joblib.load(self.LABEL_ENCODER_PATH)
+        if self._classifier_path.exists() and self._label_encoder_path.exists():
+            self.classifier = joblib.load(self._classifier_path)
+            self.label_encoder = joblib.load(self._label_encoder_path)
         else:
             raise FileNotFoundError("Classifier or label encoder not found")
 
-        if os.path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
-            self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
-            self.model = RobertaModel.from_pretrained(self.ROBERTA_MODEL_PATH)
+        if self._tokenizer_path.exists() and self._roberta_model_path.exists():
+            self.tokenizer = RobertaTokenizer.from_pretrained(self._tokenizer_path)
+            self.model = RobertaModel.from_pretrained(self._roberta_model_path)
             self.model.to(self.device)
         else:
             raise FileNotFoundError("Tokenizer or RoBERTa model not found")
-        Print(f"Models loaded from {self.MODEL_DIR}")
+        Print(f"Models loaded from {self._model_dir}")
 
     def predict_assignees(self, issue_id: int, top_n: int = 5) -> List[str]:
         try:
@@ -143,7 +139,7 @@ class Predictor:
 
         return assignees.tolist()
 
-    def evaluate(self, test_df: pd.DataFrame) -> float:
+    def evaluate(self, test_df: pd.DataFrame) -> floating[Any]:
         test_df = test_df.dropna(subset=['title', 'body', 'assignee'])
 
         test_texts = (test_df['title'] + ' ' + test_df['body']).tolist()
@@ -154,7 +150,8 @@ class Predictor:
         accuracy = np.mean(predictions == test_labels)
         return accuracy
 
-    def get_assignee_ids(self, df: pd.DataFrame) -> List[int]:
+    @staticmethod
+    def get_assignee_ids(df: pd.DataFrame) -> List[int]:
         return [
             assignee.get('id') if isinstance(assignee := ast.literal_eval(assignee_str), dict) else None
             for assignee_str in df['assignee']
@@ -162,10 +159,10 @@ class Predictor:
 
 
     def train_or_load(self, force_train: bool = False):
-        if force_train and os.path.exists(self.MODEL_DIR):
-            remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
+        if force_train and self._model_dir.exists():
+            remove_all_files_and_subdirectories_in_folder(self._model_dir)
 
-        if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
+        if self._classifier_path.exists() and self._label_encoder_path.exists():
             print("Loading models")
             self.load_models()
         else:
