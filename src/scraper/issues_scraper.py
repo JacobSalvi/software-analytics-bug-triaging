@@ -42,9 +42,9 @@ def get_issues_raw_request(token, start_page=0) -> List[Dict]:
             current_page += 1
             parsed_issues.extend(issues_to_keep)
 
-            max_number = max([issue["number"] for issue in issues])
-            if max_number > max_issue_number:
-                print(f"Max issue number is {max_number}")
+            min_number = min([issue["number"] for issue in issues])
+            if min_number > max_issue_number:
+                print(f"Min issue number is {min_number}")
                 break
     except Exception as e:
         print(f"Exception {e}")
