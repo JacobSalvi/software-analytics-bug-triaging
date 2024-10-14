@@ -72,20 +72,26 @@ def clean_text(block: marko.block.BlockElement):
 
 
 def parse_markdown(text: AnyStr, md_parser=None, renderer=None) -> AnyStr:
-    if text is None:
-        return ""
-    ast = md_parser.parse(text)
-    for child in ast.children:
-        if isinstance(child, marko.block.Heading):
-            clean_text(child)
-        if isinstance(child, marko.block.Paragraph):
-            clean_text(child)
-        if isinstance(child, marko.block.List):
-            clean_text(child)
-        if isinstance(child, marko.block.CodeBlock):
-            pass
+    try:
+        if text is None:
+            return ""
+        ast = md_parser.parse(text)
+        for child in ast.children:
+            if isinstance(child, marko.block.Heading):
+                clean_text(child)
+            if isinstance(child, marko.block.Paragraph):
+                clean_text(child)
+            if isinstance(child, marko.block.List):
+                clean_text(child)
+            if isinstance(child, marko.block.CodeBlock):
+                pass
 
-    return renderer.render(ast)
+        return renderer.render(ast)
+    
+    except Exception as e:
+        print(f"Exception: {e}")  
+        print(f"Problem: \n {text}")  
+        return ""  
 
 
 def remove_pull_request(df: pd.DataFrame) -> pd.DataFrame:
