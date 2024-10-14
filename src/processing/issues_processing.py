@@ -11,7 +11,7 @@ import pandas as pd
 import demoji
 import swifter #do not remove!
 from pandas.core.interchange.dataframe_protocol import DataFrame
-from src.processing.assignees_processing import  filter_assignee_data
+from src.processing.assignees_processing import filter_assignee_data
 
 
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
@@ -28,7 +28,7 @@ def standardize_string(text: AnyStr) -> AnyStr:
     text= re.sub(html_tags_regex, '', text)
     tokenized_text = nltk.word_tokenize(text)
     stopwords = nltk.corpus.stopwords.words('english')
-    words = [word for word in tokenized_text if word not in stopwords]
+    words = [re.sub(r'[^\w\s]', '', word) for word in tokenized_text if word not in stopwords]
     stemmer = nltk.stem.PorterStemmer()
     stemmed_words = [stemmer.stem(word=word, to_lowercase=True) for word in words]
     return " ".join(stemmed_words)
