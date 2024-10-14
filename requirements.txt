@@ -5,3 +5,4 @@ requests~=2.32.3
 nltk~=3.9.1
 marko~=2.1.2
 demoji~=1.1.0
+npyscreen~=4.10.5
