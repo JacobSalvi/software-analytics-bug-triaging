@@ -5,7 +5,7 @@ from src.Database import Database
 
 def model_evaluation(use_gpu: bool = True, models_dir: Path = None):
     predictor = Predictor(models_dir, use_gpu)
-    predictor.train_or_load()
+    predictor.load_models()
     try:
         test_df = Database.get_test_set()
         accuracy = predictor.evaluate(test_df)

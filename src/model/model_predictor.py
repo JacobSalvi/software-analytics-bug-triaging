@@ -10,7 +10,7 @@ def print_candidates(candidates, issue_id: int):
 
 def predict_assignees(issue_id: int,use_gpu: bool = True, models_dir: Path = None):
     predictor = Predictor(models_dir, use_gpu)
-    predictor.train_or_load()
+    predictor.load_models()
     candidates = predictor.predict_assignees(issue_id)
     return candidates
 
