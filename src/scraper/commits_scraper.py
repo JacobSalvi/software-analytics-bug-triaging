@@ -4,20 +4,20 @@ from dotenv import load_dotenv
 import os
 import pprint
 from pathlib import Path
-
-
-assignee = "Yoyokrazy"
+from src.DataHandler import DataHandler
+from src.Database import Database
+import ast
+from github import Github
 
 def get_output() -> Path:
     return Path(__file__).parents[1].joinpath('output')
 
 # TODO: Get the number of commits for all branches, not just main one
 
-def fetch_commits_for_assignees(assignee, token, users):
+def fetch_commits_for_assignees(token, assignees):
     #gets the number of commits in main branch
-    
     commits_per_user = {}
-    for user in users:
+    for assignee in assignees:
         url = f"https://api.github.com/repos/microsoft/vscode/commits?author={assignee}"
         headers = {
         'Authorization': f'Bearer {token}'
@@ -40,18 +40,42 @@ def fetch_commits_for_assignees(assignee, token, users):
             else:
                 print(f"Error: {response.status_code} - {response.text}")
                 break
-        commits_per_user[user] = number_of_commits
+            print(number_of_commits)
+        commits_per_user[assignee] = number_of_commits
     return commits_per_user
 
 
-def get_assigness():
-    pass
+def get_assignees(df, appearance_threshold = 5):
+    return df['assignee'].value_counts()[lambda x: x >= appearance_threshold].index.tolist()
+
+
+def get_assignees_logins(assignees):
+    logins = []
+    for assignee in assignees:
+        try:
+            if 'login' in (assignee_dict:= ast.literal_eval(assignee)):
+                logins.append(assignee_dict['login'])
+        except Exception as e:
+            print("Exception: {e}")
+            print(assignee)        
+    return logins
+
+# def get_commit_count(username, token):
+#     g = Github(token)
+#     repo = g.get_repo(f"microsoft/vscode")
+#     commit_count = 0
+#     for commit in repo.get_commits(author=username):
+#         commit_count += 1
+#         print(commit_count)
+
+#     return commit_count
 
 def main():
+    df = Database.get_issues()
+    logins = get_assignees_logins(get_assignees(df))
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
-    assignees = get_assigness()
-    commits_per_user = fetch_commits_for_assignees(assignee, github_token, assignees)
+    commits_per_user = fetch_commits_for_assignees(github_token, logins)
     df = pd.DataFrame(commits_per_user)
     output = get_output()
     path = output.joinpath("commits_per_user.csv")
