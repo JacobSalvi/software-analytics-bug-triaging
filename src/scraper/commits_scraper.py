@@ -8,13 +8,14 @@ from src.DataHandler import DataHandler
 from src.Database import Database
 import ast
 from github import Github
+from typing import List, Dict, Any
 
 def get_output() -> Path:
     return Path(__file__).parents[1].joinpath('output')
 
 # TODO: Get the number of commits for all branches, not just main one
 
-def fetch_commits_for_assignees(token, assignees):
+def fetch_commits_for_assignees(token: str, assignees: List[str]) -> Dict[str, int]:
     #gets the number of commits in main branch
     commits_per_user = {}
     for assignee in assignees:
@@ -45,11 +46,11 @@ def fetch_commits_for_assignees(token, assignees):
     return commits_per_user
 
 
-def get_assignees(df, appearance_threshold = 5):
+def get_assignees(df: pd.DataFrame, appearance_threshold: int = 5) -> List[str]:
     return df['assignee'].value_counts()[lambda x: x >= appearance_threshold].index.tolist()
 
 
-def get_assignees_logins(assignees):
+def get_assignees_logins(assignees: pd.Series) -> List[str]:
     logins = []
     for assignee in assignees:
         try:
