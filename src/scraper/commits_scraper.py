@@ -11,7 +11,7 @@ from github import Github
 from typing import List, Dict, Any
 
 def get_output() -> Path:
-    return Path(__file__).parents[1].joinpath('output')
+    return Path(__file__).parents[2].joinpath('output')
 
 # TODO: Get the number of commits for all branches, not just main one
 
@@ -41,7 +41,6 @@ def fetch_commits_for_assignees(token: str, assignees: List[str]) -> Dict[str, i
             else:
                 print(f"Error: {response.status_code} - {response.text}")
                 break
-            print(number_of_commits)
         commits_per_user[assignee] = number_of_commits
     return commits_per_user
 
@@ -77,10 +76,12 @@ def main():
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
     commits_per_user = fetch_commits_for_assignees(github_token, logins)
-    df = pd.DataFrame(commits_per_user)
+    series = pd.Series(commits_per_user)
     output = get_output()
+    if not output.is_dir():
+        output.mkdir()
     path = output.joinpath("commits_per_user.csv")
-    df.to_csv(path, index=False)
+    series.to_csv(path, header=False)
    
 if __name__ == '__main__':
     main()
