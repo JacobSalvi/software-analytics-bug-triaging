@@ -9,6 +9,18 @@ from src.DataHandler import DataHandler
 class Database:
     RAW_DATA = None
     DATA = None
+    COMMITS = None
+
+    @staticmethod
+    def get_commits() -> pd.DataFrame:
+        if Database.COMMITS is None:
+            Database.COMMITS = DataHandler.get_commits()
+        return Database.COMMITS
+
+    @staticmethod
+    def get_commits_per_user(user: str)  -> int:
+        commits = Database.get_commits()
+        return commits[commits['C1'] == user]['C2'].values[0]
 
     @staticmethod
     def get_raw_issues() -> pd.DataFrame:
@@ -81,6 +93,15 @@ class Database:
             for assignee_str in df['assignee']
         ]
 
+    @staticmethod
+    def get_all_assignees_in_issues()-> List[str]:
+        df = Database.get_issues()
+        return df['assignee'].unique()
+
+    @staticmethod
+    def get_user_by_id(assignee_id: int) -> str | None:
+        assignees = Database.get_all_assignees_in_issues()
+        return next((assignee for assignee in assignees if assignee.get('id') == assignee_id), None)
 
 if __name__ == '__main__':
     pass

@@ -24,7 +24,7 @@ class Predictor:
     BATCH_SIZE = 256
     MAX_ITERATION = 100000
     SOLVER = 'lbfgs'
-    TOLERANCE = 1e-4
+    TOLERANCE = 1e-7
 
     MODEL_LOADED = False
     MODEL_DIR = Path(__file__).parent.resolve() / "../../models"
@@ -76,56 +76,27 @@ class Predictor:
     def preprocess_text(self, text: str) -> str:
         return text.lower().strip()
 
-    def get_embeddings_with_sliding_window(self, texts: List[str], window_size: int = 512,
-                                           overlap: int = 128) -> np.ndarray:
-        """
-        Generate embeddings using a sliding window approach for long texts.
-
-        :param texts: List of input texts
-        :param window_size: Size of the window (typically 512 tokens)
-        :param overlap: Number of overlapping tokens between consecutive windows
-        :return: Numpy array of concatenated embeddings
-        """
+    def get_embeddings(self, texts: List[str]) -> np.ndarray:
         self.model.eval()  # Set model to evaluation mode
         embeddings = []
 
         with torch.no_grad():
-            for text in tqdm(texts, desc="Generating embeddings with sliding window"):
-                preprocessed_text = self.preprocess_text(text)
-
-                # Tokenize the text into a full sequence of tokens
-                full_tokenized = self.tokenizer(
-                    preprocessed_text,
+            for i in tqdm(range(0, len(texts), self.BATCH_SIZE), desc="Generating embeddings"):
+                batch_texts = texts[i:i + self.BATCH_SIZE]
+                preprocessed_texts = [self.preprocess_text(text) for text in batch_texts]
+                inputs = self.tokenizer(
+                    preprocessed_texts,
                     return_tensors='pt',
-                    padding=False,
-                    truncation=False  # Don't truncate, handle with sliding window
+                    padding=True,
+                    truncation=True,
+                    max_length=512
                 )
-                input_ids = full_tokenized['input_ids'][0]  # Get the token ids tensor
-                num_tokens = len(input_ids)
+                inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
-                # Apply the sliding window approach
-                window_embeddings = []
-                for i in range(0, num_tokens, window_size - overlap):
-                    window_input_ids = input_ids[i:i + window_size]
-                    if len(window_input_ids) < window_size:
-                        # If the last window is smaller than window_size, pad it
-                        window_input_ids = torch.cat(
-                            [window_input_ids, torch.zeros(window_size - len(window_input_ids), dtype=torch.long)])
-
-                    # Create input for the model
-                    inputs = {'input_ids': window_input_ids.unsqueeze(0).to(self.device)}
-
-                    # Forward pass to get the embeddings
-                    outputs = self.model(**inputs)
-
-                    # Extract the [CLS] embedding (for classification tasks)
-                    cls_embedding = outputs.last_hidden_state[:, 0, :].cpu().numpy()
-                    window_embeddings.append(cls_embedding)
-
-                # Average the embeddings from the sliding windows
-                averaged_embedding = np.mean(window_embeddings, axis=0)
-                embeddings.append(averaged_embedding)
-
+                outputs = self.model(**inputs)
+                # Use the [CLS] token's embedding
+                cls_embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy()
+                embeddings.append(cls_embeddings)
         return np.vstack(embeddings)
 
     def train(self, batch_size: int = BATCH_SIZE):
@@ -139,7 +110,7 @@ class Predictor:
 
         # Create corpus
         corpus = (train_df['title'] + ' ' + train_df['body']).tolist()
-        train_embeddings = self.get_embeddings_with_sliding_window(corpus)
+        train_embeddings = self.get_embeddings(corpus)
 
         # Encode assignees, use assignees ids as labels
         assignee_ids = Database.extract_assignee_ids(train_df)
@@ -185,7 +156,7 @@ class Predictor:
 
         issue_df.fillna('', inplace=True)
         query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body']
-        embedding = self.get_embeddings_with_sliding_window([query_corpus])
+        embedding = self.get_embeddings([query_corpus])
 
         probs = self.classifier.predict_proba(embedding)[0]
         top_indices = np.argsort(probs)[::-1][:top_n]
@@ -199,7 +170,7 @@ class Predictor:
         test_df = test_df.dropna(subset=['title', 'body', 'assignee'])
 
         test_texts = (test_df['title'] + ' ' + test_df['body']).tolist()
-        test_embeddings = self.get_embeddings_with_sliding_window(test_texts)
+        test_embeddings = self.get_embeddings(test_texts)
         test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
 
         predictions = self.classifier.predict(test_embeddings)
