@@ -22,7 +22,7 @@ from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 class Predictor:
     BATCH_SIZE = 256
-    MAX_ITERATION = 3000
+    MAX_ITERATION = 500
     SOLVER = 'lbfgs'
     TOLERANCE = 1e-5
 
@@ -109,7 +109,7 @@ class Predictor:
         print(f"Training on {len(train_df)} issues with {len(train_df["assignee"].value_counts())} assignees")
 
         # Create corpus
-        corpus = (train_df['title'] + ' ' + train_df['body']).tolist()
+        corpus = (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
         train_embeddings = self.get_embeddings(corpus)
 
         # Encode assignees, use assignees ids as labels

@@ -59,6 +59,7 @@ class Database:
         if test_set_df.empty:
             raise ValueError("Empty test set")
 
+        test_set_df.loc[:, 'labels'] = test_set_df['labels'].apply(Database.combine_labels)
         return test_set_df
 
     @staticmethod
@@ -73,6 +74,8 @@ class Database:
         assignees_to_keep = assignee_counts[assignee_counts > 5].index
         train_df = train_set_df[train_set_df['assignee'].isin(assignees_to_keep)]
         train_df.dropna(subset=['title', 'body', 'assignee'], inplace=True)
+
+        train_df.loc[:, 'labels'] = train_df['labels'].apply(Database.combine_labels)
         return train_df
 
     @staticmethod
@@ -103,7 +106,24 @@ class Database:
         assignees = Database.get_all_assignees_in_issues()
         return next((assignee for assignee in assignees if assignee.get('id') == assignee_id), None)
 
+
+    @staticmethod
+    def combine_labels(labels):
+        if isinstance(labels, str):
+            labels = ast.literal_eval(labels)
+
+        if labels:
+            combined_string = ' '.join(labels).upper()
+        else:
+            combined_string = ''
+
+        return combined_string
+
+
+
 if __name__ == '__main__':
+
+    df = Database.get_test_set()
     pass
 
 
