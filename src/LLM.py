@@ -9,9 +9,9 @@ from nltk.corpus import stopwords
 from src.DataHandler import DataHandler
 
 
-def stopRemoval(issues):
+def stop_removal(issues):
     stop = stopwords.words('english')
-    issues['title'] = issues['title'].apply(lambda x : ' '.join([word for word in x.split() if word not in (stop)]))
+    issues['title'] = issues['title'].apply(lambda x : ' '.join([word for word in x.split() if word not in stop]))
     return issues
 
 def load_issues() :

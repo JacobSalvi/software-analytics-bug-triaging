@@ -8,9 +8,8 @@ import requests
 from dotenv import load_dotenv
 import pandas as pd
 
+from src.utils import utils
 from src.utils.data_splitter import split_ndjson_file
-def get_output() -> Path:
-    return Path(__file__).parents[1].joinpath('data')
 
 
 def get_issues_raw_request(token, start_page=0) -> List[Dict]:
@@ -35,18 +34,20 @@ def get_issues_raw_request(token, start_page=0) -> List[Dict]:
                 break
             issues_to_keep = [issue for issue in issues if issue["number"] <= max_issue_number
                               and len(issue["assignees"]) == 1]
-            max_number = max([issue["number"] for issue in issues])
-            if max_number > max_issue_number:
-                print(f"Max issue number is {max_number}")
-                break
+
             if current_page % 100 == 0:
                 print(f"Saving up to page {current_page}, number of issues {len(parsed_issues)}")
-                output = get_output()
+                output = utils.get_output()
                 parsed_json = output.joinpath(f"parsed_issues_{current_page}.json")
                 df = pd.DataFrame(parsed_issues)
                 df.to_json(parsed_json, orient='records', lines=True)
             current_page += 1
             parsed_issues.extend(issues_to_keep)
+
+            min_number = min([issue["number"] for issue in issues])
+            if min_number > max_issue_number:
+                print(f"Min issue number is {min_number}")
+                break
     except Exception as e:
         print(f"Exception {e}")
         return parsed_issues
@@ -82,20 +83,20 @@ def main():
     argument_parser.add_argument("--starting-page", dest="start_page",type=int, default=0)
     args = argument_parser.parse_args()
     starting_page = args.start_page
-    output = get_output()
+    output = utils.get_output()
     if not output.is_dir():
         output.mkdir()
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
 
-    parsed_csv = output.joinpath("raw_parsed_issues.csv")
+    parsed_csv: Path = output.joinpath("parsed_issues.csv")
     parsed_issues = get_issues_raw_request(github_token, starting_page)
 
     print(f"Saving parsed issues to {parsed_csv}")
     df = pd.DataFrame(parsed_issues)
     df.to_csv(parsed_csv, index=False)
 
-    parsed_json = output.joinpath("parsed_issues.json")
+    parsed_json: Path = output.joinpath("parsed_issues.json")
     df.to_json(parsed_json, orient='records', lines=True)
     
 

@@ -1,5 +1,6 @@
 import argparse
 import re
+import string
 from pathlib import Path
 from typing import AnyStr
 import nltk
@@ -25,7 +26,8 @@ class MdRenderer(marko.md_renderer.MarkdownRenderer):
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-    text= re.sub(html_tags_regex, '', text)
+    text = re.sub(html_tags_regex, '', text)
+    text = text.translate(str.maketrans('', '', string.punctuation))
     tokenized_text = nltk.word_tokenize(text)
     stopwords = nltk.corpus.stopwords.words('english')
     words = [re.sub(r'[^\w\s]', '', word) for word in tokenized_text if word not in stopwords]
@@ -116,7 +118,7 @@ def data_slicer(df: pd.DataFrame, size: int) -> pd.DataFrame:
     return df.sample(n=size)
 
 
-def process_input(input_file: Path, output_path: Path, compressed: bool = False):
+def process_input(input_file: Path, output_path: Path):
     df = pd.read_json(input_file, lines=True)
     df = process_data(df)
     store_processed_data(df, output_path)
