@@ -108,7 +108,7 @@ def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee']]
+    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee', "labels"]]
 
 def store_processed_data(df: pd.DataFrame, output_path: Path):
     df.to_csv(output_path, index=False)
@@ -127,6 +127,7 @@ def process_data(df: DataFrame):
     download_necessary_nltk_data()
     df = remove_pull_request(df)
     df = pick_columns(df)
+    df["labels"] = df["labels"].apply(lambda arr: [el.get("name") for el in arr])
     df = columns_parsing(df)
     df = filter_assignee_data(df)
     return df
