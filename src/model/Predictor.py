@@ -22,9 +22,9 @@ from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 class Predictor:
     BATCH_SIZE = 256
-    MAX_ITERATION = 100000
+    MAX_ITERATION = 3000
     SOLVER = 'lbfgs'
-    TOLERANCE = 1e-7
+    TOLERANCE = 1e-5
 
     MODEL_LOADED = False
     MODEL_DIR = Path(__file__).parent.resolve() / "../../models"
