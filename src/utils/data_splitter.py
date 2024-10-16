@@ -34,11 +34,14 @@ def check_file_readable(file_path: Path):
         for line in f:
             json.loads(line)
 
-
-if __name__ == "__main__":
+def main():
     # Example usage
     input_file = Path('../../data/parsed_issues.json')
     output_file1 = Path('../../data/parsed_issues_1.json')
     output_file2 = Path('../../data/parsed_issues_2.json')
 
     split_ndjson_file(input_file, output_file1, output_file2)
+
+
+if __name__ == "__main__":
+    main()

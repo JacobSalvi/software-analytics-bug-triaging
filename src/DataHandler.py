@@ -17,6 +17,11 @@ class DataHandler:
     TAR_GZ_FILE_2 = Path(__file__).parent / '../data/raw_parsed_issues_2.tar.gz'
 
     @staticmethod
+    def get_commits() -> DataFrame:
+        pass
+
+
+    @staticmethod
     def get_raw() -> list:
         combined_data = []
 

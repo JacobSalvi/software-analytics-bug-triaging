@@ -11,7 +11,7 @@ from github import Github
 from typing import List, Dict, Any
 
 def get_output() -> Path:
-    return Path(__file__).parents[2].joinpath('output')
+    return Path(__file__).parents[2].joinpath('data')
 
 # TODO: Get the number of commits for all branches, not just main one
 

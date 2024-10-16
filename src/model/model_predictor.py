@@ -8,8 +8,8 @@ def print_candidates(candidates, issue_id: int):
     for idx, assignee in enumerate(candidates, 1):
         print(f"{idx}. Assignee: {assignee}")
 
-def predict_assignees(issue_id: int,use_gpu: bool = True, models_dir: Path = None):
-    predictor = Predictor(models_dir, use_gpu)
+def predict_assignees(issue_id: int, models_dir: Path = None, use_gpu: bool = True, batch_size: int = 256):
+    predictor = Predictor(models_dir, use_gpu, batch_size)
     predictor.load_models()
     candidates = predictor.predict_assignees(issue_id)
     return candidates

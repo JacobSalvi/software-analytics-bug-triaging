@@ -2,14 +2,15 @@ import argparse
 import os
 from pathlib import Path
 from typing import List, Dict
+from urllib.request import DataHandler
 
 import requests
 from dotenv import load_dotenv
 import pandas as pd
 
-
+from src.utils.data_splitter import split_ndjson_file
 def get_output() -> Path:
-    return Path(__file__).parents[1].joinpath('output')
+    return Path(__file__).parents[1].joinpath('data')
 
 
 def get_issues_raw_request(token, start_page=0) -> List[Dict]:
@@ -52,6 +53,30 @@ def get_issues_raw_request(token, start_page=0) -> List[Dict]:
     return parsed_issues
 
 
+def divide_json_file(path: Path):
+    # Define paths for the split CSV files
+    csv1_path = path.parent / "raw_parsed_issues_1.csv"
+    csv2_path = path.parent / "raw_parsed_issues_2.csv"
+    split_ndjson_file(path, csv1_path, csv2_path)
+
+    try:
+        tar_gz1_path = path.parent / "raw_parsed_issues_1.tar.gz"
+        with open(csv1_path, 'rb') as file1:
+            DataHandler.compress_file_to_tar_gz(tar_gz1_path, file1, "raw_parsed_issues_1.csv")
+
+        tar_gz2_path = path.parent / "raw_parsed_issues_2.tar.gz"
+        with open(csv2_path, 'rb') as file2:
+            DataHandler.compress_file_to_tar_gz(tar_gz2_path, file2, "raw_parsed_issues_2.csv")
+
+        csv1_path.unlink()
+        csv2_path.unlink()
+        path.unlink()
+        print(f"Successfully created {tar_gz1_path} and {tar_gz2_path}. Deleted intermediate CSV files.")
+
+    except Exception as e:
+        print(f"An error occurred during compression or deletion: {e}")
+
+
 def main():
     argument_parser = argparse.ArgumentParser("Perform github requests")
     argument_parser.add_argument("--starting-page", dest="start_page",type=int, default=0)
@@ -63,7 +88,7 @@ def main():
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
 
-    parsed_csv = output.joinpath("parsed_issues.csv")
+    parsed_csv = output.joinpath("raw_parsed_issues.csv")
     parsed_issues = get_issues_raw_request(github_token, starting_page)
 
     print(f"Saving parsed issues to {parsed_csv}")
