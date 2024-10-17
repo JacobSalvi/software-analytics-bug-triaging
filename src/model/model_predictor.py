@@ -3,6 +3,8 @@ from pathlib import Path
 
 from src.Database import Database
 from src.model.Predictor import Predictor
+from src.utils import utils
+
 
 def print_candidates(candidates: list[str], issue_id: int):
     print(f"Best candidate assignees for issue {issue_id}:")

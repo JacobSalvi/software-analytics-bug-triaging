@@ -1,5 +1,5 @@
 import ast
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -99,7 +99,7 @@ class Database:
         return df['assignee'].unique()
 
     @staticmethod
-    def get_user_by_id(assignee_id: int) -> str | None:
+    def get_user_by_id(assignee_id: int) -> Optional[str]:
         assignees = Database.get_all_assignees_in_issues()
         return next((assignee for assignee in assignees if assignee.get('id') == assignee_id), None)
 

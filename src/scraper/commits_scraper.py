@@ -2,13 +2,11 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 import os
-import pprint
 from pathlib import Path
-from src.DataHandler import DataHandler
 from src.Database import Database
 import ast
-from github import Github
-from typing import List, Dict, Any
+from typing import List, Dict, AnyStr
+
 
 def get_output() -> Path:
     return Path(__file__).parents[2].joinpath('data')
@@ -49,7 +47,7 @@ def get_assignees(df: pd.DataFrame, appearance_threshold: int = 5) -> List[str]:
     return df['assignee'].value_counts()[lambda x: x >= appearance_threshold].index.tolist()
 
 
-def get_assignees_logins(assignees: pd.Series) -> List[str]:
+def get_assignees_logins(assignees: List[AnyStr]) -> List[str]:
     logins = []
     for assignee in assignees:
         try:
