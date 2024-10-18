@@ -14,7 +14,9 @@ import swifter #do not remove!
 from pandas.core.interchange.dataframe_protocol import DataFrame
 from src.processing.assignees_processing import filter_assignee_data
 from src.utils import utils
-
+import contractions
+from nltk.stem import WordNetLemmatizer
+import unicodedata
 
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
     def render_emphasis(self, element: marko.inline.Emphasis) -> str:
@@ -22,15 +24,37 @@ class MdRenderer(marko.md_renderer.MarkdownRenderer):
 
     def render_strong_emphasis(self, element: marko.inline.StrongEmphasis) -> str:
         return f" **{self.render_children(element)}** "
-
-
+    
+        
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
     text = re.sub(html_tags_regex, '', text)
     https_requests_regex = re.compile('https:\/\/[^\s]+')
     text = re.sub(https_requests_regex, '', text)
-
+    text = unicodedata.normalize('NFC', text)    # Unicode normalization
+    text = contractions.fix(text) # Expand contractions can't -> cannot
+    text = text.lower()
+    url_regex = re.compile(r'http[s]?://\S+|www\.\S+')
+    text = re.sub(url_regex, '', text)
+    email_regex = re.compile(r'\S+@\S+')
+    text = re.sub(email_regex, '', text) # Remove emails
+    lengthened_words_regex = re.compile(r"(.)\1{2,}") # Handling Repeated Characters
+    text = re.sub(lengthened_words_regex, '', text)
+    text = re.sub(r'@\w+', '', text)  # Remove mentions
+    text = re.sub(r'#\w+', '', text)  # Remove hashtags
+    # Remove code snippets
+    text = ''.join(c for c in unicodedata.normalize('NFD', text) # Normalize accented characters
+                   if unicodedata.category(c) != 'Mn')
+    
+    text = re.sub(r'\d+', '', text) # Remove numbers
+    # Remove special characters and punctuation
+    text = re.sub(r'[^\w\s]', ' ', text)
+    text = text.replace('\n', ' ').replace('\r', ' ')
+    text = ' '.join(text.split())
+    text = text.encode('ascii', 'ignore').decode() # Remove Non-ASCII Characters
+    text = ' '.join(text.split()) # Remove extra whitespace
+    
     modules_regex = re.compile('(\w+\.)+\w')
     tokens: List[AnyStr] = text.split(" ")
     translation = str.maketrans('', '', string.punctuation)
@@ -38,13 +62,14 @@ def standardize_string(text: AnyStr) -> AnyStr:
                  filter(lambda token: len(token) <= 40, tokens)))
     text = " ".join(tokens)
     tokenized_text = nltk.word_tokenize(text)
-    stopwords = nltk.corpus.stopwords.words('english')
+
+    stopwords = set(nltk.corpus.stopwords.words('english'))
     words = [word for word in tokenized_text if word not in stopwords]
-    stemmer = nltk.stem.PorterStemmer()
-    stemmed_words = [stemmer.stem(word=word, to_lowercase=True) for word in words]
-    return " ".join(stemmed_words)
 
-
+    lemmatizer = WordNetLemmatizer()
+    lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
+    return ' '.join(lemmatized_words)
+    
 def download_necessary_nltk_data():
     try:
         find('tokenizers/punkt')
