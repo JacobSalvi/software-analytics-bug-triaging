@@ -1,3 +1,5 @@
+import argparse
+
 import pandas as pd
 import requests
 from dotenv import load_dotenv
@@ -6,6 +8,8 @@ from pathlib import Path
 from src.Database import Database
 import ast
 from typing import List, Dict, AnyStr
+
+from src.utils import utils
 
 
 def get_output() -> Path:
@@ -69,13 +73,16 @@ def get_assignees_logins(assignees: List[AnyStr]) -> List[str]:
 #     return commit_count
 
 def main():
+    argument_parser = argparse.ArgumentParser("Perform github VS-Code commits scraping")
+    argument_parser.add_argument("--data_dir", type=Path, default=utils.data_dir(), help="the directory to save the data")
+    args = argument_parser.parse_args()
     df = Database.get_issues()
     logins = get_assignees_logins(get_assignees(df))
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
     commits_per_user = fetch_commits_for_assignees(github_token, logins)
     series = pd.Series(commits_per_user)
-    output = get_output()
+    output = args.data_dir
     if not output.is_dir():
         output.mkdir()
     path = output.joinpath("commits_per_user.csv")

@@ -1,42 +1,35 @@
-from pathlib import Path
-
-from numpy import floating
-from sympy.codegen import Print
-from torch.nn import CrossEntropyLoss
-from torch.utils.data import DataLoader
-
-from src.Database import Database
 import os
-import pandas as pd
+from pathlib import Path
+from typing import List
 import numpy as np
-from transformers import RobertaTokenizer, RobertaModel, AdamW
 import torch
+from torch.optim import AdamW
+from torch.utils.data import DataLoader
+from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from sklearn.preprocessing import LabelEncoder
-from sklearn.exceptions import NotFittedError
-from typing import List, Any
 import joblib
+import pandas as pd
 from tqdm import tqdm
 
+from src.Database import Database
 from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 
 class Predictor:
-    BATCH_SIZE = 256
-    MAX_ITERATION = 500
+    BATCH_SIZE = 32
+    MAX_ITERATION = 5
     LEARNING_RATE = 2e-5
-    SOLVER = 'lbfgs'
     TOLERANCE = 1e-5
 
-    MODEL_LOADED = False
     MODEL_DIR = Path(__file__).parent.resolve() / "../../models"
-    CLASSIFIER_PATH = os.path.join(MODEL_DIR, 'classifier.joblib')
-    LABEL_ENCODER_PATH = os.path.join(MODEL_DIR, 'label_encoder.joblib')
-    TOKENIZER_PATH = os.path.join(MODEL_DIR, 'tokenizer')
-    ROBERTA_MODEL_PATH = os.path.join(MODEL_DIR, 'roberta-model')
+    LABEL_ENCODER_PATH = Path.joinpath(MODEL_DIR, 'label_encoder.joblib')
+    TOKENIZER_PATH = Path.joinpath(MODEL_DIR, 'tokenizer')
+    ROBERTA_MODEL_PATH = Path.joinpath(MODEL_DIR, 'roberta-model')
 
-    def __init__(self, model_dir: Path = None, use_gpu: bool = True, batch_size: int = BATCH_SIZE, max_iteration: int = MAX_ITERATION, solver: str = SOLVER, tolerance: float = TOLERANCE):
+    def __init__(self, model_dir: Path = None, use_gpu: bool = True,
+                 batch_size: int = BATCH_SIZE, max_iteration: int = MAX_ITERATION,
+                 tolerance: float = TOLERANCE):
         self.MAX_ITERATION = max_iteration
-        self.SOLVER = solver
         self.TOLERANCE = tolerance
         self.BATCH_SIZE = batch_size
 
@@ -50,79 +43,48 @@ class Predictor:
 
         print(f"Using device: {self.device}")
 
-        # Initialize tokenizer and model
-        if os.path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
-            self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
-            self.model = RobertaModel.from_pretrained(self.ROBERTA_MODEL_PATH)
-            self.model.to(self.device)
-            print("Loaded tokenizer and RoBERTa model from disk")
-        else:
-            self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-            self.model = RobertaModel.from_pretrained('roberta-base')
-            self.model.to(self.device)
-            print("Loaded pre-trained tokenizer and RoBERTa model from the package")
-
-        # Initialize label encoder and classifier
+        # Initialize label encoder
         self.label_encoder = LabelEncoder()
-        # Optimizer and loss function
-        self.optimizer = AdamW(self.model.parameters(), lr=self.LEARNING_RATE)
-        self.loss_fn = CrossEntropyLoss()
-
-        # Load classifier and label encoder if exists
-        if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
-            self.load_models()
-            self.MODEL_LOADED = True
 
     def setting_cuda(self):
-        torch.cuda.set_per_process_memory_fraction(0.9)
+        pass  # Commented out for now
+        # torch.cuda.set_per_process_memory_fraction(0.9)
 
     def preprocess_text(self, text: str) -> str:
         return text.lower().strip()
 
-    def get_embeddings(self, texts: List[str]) -> np.ndarray:
-        self.model.eval()  # Set model to evaluation mode
-        embeddings = []
+    def get_corpus(self, train_df: pd.DataFrame) -> List[str]:
+        return (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
 
-        with torch.no_grad():
-            for i in tqdm(range(0, len(texts), self.BATCH_SIZE), desc="Generating embeddings"):
-                batch_texts = texts[i:i + self.BATCH_SIZE]
-                preprocessed_texts = [self.preprocess_text(text) for text in batch_texts]
-                inputs = self.tokenizer(
-                    preprocessed_texts,
-                    return_tensors='pt',
-                    padding=True,
-                    truncation=True,
-                    max_length=512
-                )
-                inputs = {key: value.to(self.device) for key, value in inputs.items()}
+    def get_assignee_ids(self, train_df: pd.DataFrame) -> List[int]:
+        return Database.extract_assignee_ids(train_df)
 
-                outputs = self.model(**inputs)
-                # Use the [CLS] token's embedding
-                cls_embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy()
-                embeddings.append(cls_embeddings)
-        return np.vstack(embeddings)
+    def set_base_model(self, num_labels):
+        self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        self.model = RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=num_labels)
+        self.model.to(self.device)
+        print("Loaded pre-trained tokenizer and RoBERTa model with classification head")
 
     def train(self, batch_size: int = BATCH_SIZE):
-        if os.path.exists(self.MODEL_DIR):
+        if Path.exists(self.MODEL_DIR):
             remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
+        train_df = Database.get_train_set().copy()
+        corpus = self.get_corpus(train_df)
 
-        # Load training data
-        train_df = Database.get_train_set()
-
-        #print(f"Training on {len(train_df)} issues with {len(train_df["assignee"].value_counts())} assignees")
-
-        # Create corpus
-        corpus = (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
-        train_embeddings = self.get_embeddings(corpus)
-
-        # Encode assignees, use assignees ids as labels
+        # Encode assignees
         assignee_ids = Database.extract_assignee_ids(train_df)
         labels = self.label_encoder.fit_transform(assignee_ids)
+        num_labels = len(self.label_encoder.classes_)
 
-        train_loader = DataLoader(list(zip(corpus, labels)), batch_size=self.BATCH_SIZE, shuffle=True)
+        # Now set up the model with the correct number of labels
+        self.set_base_model(num_labels)
+
+        optimizer = AdamW(self.model.parameters(), lr=self.LEARNING_RATE)
+        train_loader = DataLoader(list(zip(corpus, labels)), batch_size=batch_size, shuffle=True)
 
         for epoch in range(self.MAX_ITERATION):
             epoch_loss = 0
+            self.model.train()
             for texts, batch_labels in train_loader:
                 preprocessed_texts = [self.preprocess_text(text) for text in texts]
                 inputs = self.tokenizer(
@@ -131,17 +93,23 @@ class Predictor:
                     padding=True,
                     truncation=True,
                     max_length=512
-                ).to(self.device)
+                )
+                # Move inputs to the device
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-                batch_labels = torch.tensor(batch_labels).to(self.device)
+                # Ensure batch_labels is a tensor and move to device
+                if not isinstance(batch_labels, torch.Tensor):
+                    batch_labels = torch.tensor(batch_labels)
+                batch_labels = batch_labels.to(self.device)
 
+                # Forward pass
                 outputs = self.model(**inputs, labels=batch_labels)
                 loss = outputs.loss
 
                 # Backpropagation
+                optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
-                self.optimizer.zero_grad()
+                optimizer.step()
 
                 epoch_loss += loss.item()
 
@@ -151,32 +119,30 @@ class Predictor:
         self.MODEL_LOADED = True
 
     def save_models(self):
-        joblib.dump(self.classifier, self.CLASSIFIER_PATH)
         joblib.dump(self.label_encoder, self.LABEL_ENCODER_PATH)
-
         self.tokenizer.save_pretrained(self.TOKENIZER_PATH)
         self.model.save_pretrained(self.ROBERTA_MODEL_PATH)
         print(f"Models saved to {self.MODEL_DIR}")
 
     def load_models(self):
-        if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
-            self.classifier = joblib.load(self.CLASSIFIER_PATH)
+        if os.path.exists(self.LABEL_ENCODER_PATH):
             self.label_encoder = joblib.load(self.LABEL_ENCODER_PATH)
         else:
-            raise FileNotFoundError("Classifier or label encoder not found")
+            raise FileNotFoundError("Label encoder not found")
 
         if os.path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
             self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
-            self.model = RobertaModel.from_pretrained(self.ROBERTA_MODEL_PATH)
+            self.model = RobertaForSequenceClassification.from_pretrained(self.ROBERTA_MODEL_PATH)
             self.model.to(self.device)
+            print("Loaded tokenizer and RoBERTa model from disk")
         else:
             raise FileNotFoundError("Tokenizer or RoBERTa model not found")
-        Print(f"Models loaded from {self.MODEL_DIR}")
+
+        print(f"Models loaded from {self.MODEL_DIR}")
         self.MODEL_LOADED = True
 
     def predict_assignees(self, issue_id: int, top_n: int = 5) -> List[str]:
-        if not self.MODEL_LOADED:
-            raise NotFittedError("Models are not loaded. Train or load models before making predictions")
+        self.load_models()
         try:
             issue_df = Database.get_issues_by_id(issue_id)
         except ValueError as e:
@@ -184,6 +150,7 @@ class Predictor:
 
         issue_df.fillna('', inplace=True)
         query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
+        query_corpus = self.preprocess_text(query_corpus)
         self.model.eval()
         inputs = self.tokenizer(
             [query_corpus],
@@ -191,7 +158,9 @@ class Predictor:
             padding=True,
             truncation=True,
             max_length=512
-        ).to(self.device)
+        )
+        # Move inputs to device
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
             outputs = self.model(**inputs)
@@ -200,19 +169,17 @@ class Predictor:
         # Get the probabilities and top N predictions
         probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
         top_indices = np.argsort(probs)[::-1][:top_n]
-        assignees = self.label_encoder.inverse_transform(top_indices)
+        assignee_ids = self.label_encoder.inverse_transform(top_indices)
 
-        return assignees.tolist()
+        return assignee_ids.tolist()
 
-    def evaluate(self, test_df: pd.DataFrame) -> floating[Any]:
-        if not self.MODEL_LOADED:
-            raise NotFittedError("Models are not loaded. Train or load models before making predictions")
-
+    def evaluate(self, test_df: pd.DataFrame) -> float:
+        self.load_models()
         test_texts = (test_df['title'] + ' ' + test_df['body'] + ' ' + test_df['labels']).tolist()
-        #test_embeddings = self.get_embeddings(test_texts)
+        test_texts = [self.preprocess_text(text) for text in test_texts]
         test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
 
-        self.model.eval()  #
+        self.model.eval()
         predictions = []
 
         # Tokenize and predict in batches
@@ -225,14 +192,13 @@ class Predictor:
                     padding=True,
                     truncation=True,
                     max_length=512
-                ).to(self.device)
+                )
+                # Move inputs to device
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
                 outputs = self.model(**inputs)
                 logits = outputs.logits
                 batch_predictions = torch.argmax(logits, dim=1).cpu().numpy()
                 predictions.extend(batch_predictions)
-
-        # Calculate accuracy
         accuracy = np.mean(np.array(predictions) == test_labels)
         return accuracy
-

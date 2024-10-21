@@ -1,8 +1,7 @@
+import argparse
 import json
 from pathlib import Path
-
-from src.utils import utils
-
+from src.DataHandler import DataHandler
 
 def split_ndjson_file(input_file: Path, output_file1: Path, output_file2: Path):
     with open(input_file, 'r') as f:
@@ -38,14 +37,34 @@ def check_file_readable(file_path: Path):
             json.loads(line)
 
 
-def main():
-    # Example usage
-    data: Path = utils.data_dir()
-    input_file = data.joinpath('parsed_issues.json')
-    output_file1 = data.joinpath('parsed_issues_1.json')
-    output_file2 = data.joinpath('parsed_issues_2.json')
+def divide_json_file(path: Path):
+    csv1_path = path.parent / "raw_parsed_issues_1.csv"
+    csv2_path = path.parent / "raw_parsed_issues_2.csv"
+    split_ndjson_file(path, csv1_path, csv2_path)
 
-    split_ndjson_file(input_file, output_file1, output_file2)
+    try:
+        tar_gz1_path = path.parent / "raw_parsed_issues_1.tar.gz"
+        with open(csv1_path, 'rb') as file1:
+            DataHandler.compress_file_to_tar_gz(tar_gz1_path, file1, "raw_parsed_issues_1.csv")
+
+        tar_gz2_path = path.parent / "raw_parsed_issues_2.tar.gz"
+        with open(csv2_path, 'rb') as file2:
+            DataHandler.compress_file_to_tar_gz(tar_gz2_path, file2, "raw_parsed_issues_2.csv")
+
+        csv1_path.unlink()
+        csv2_path.unlink()
+        path.unlink()
+        print(f"Successfully created {tar_gz1_path} and {tar_gz2_path}. Deleted intermediate CSV files.")
+
+    except Exception as e:
+        print(f"An error occurred during compression or deletion: {e}")
+
+
+
+def main():
+    argument_parser = argparse.ArgumentParser("Data Splitter")
+    argument_parser.add_argument("json_data", type=str, help="the raw JSON file to split and compress")
+    divide_json_file(Path(argument_parser.parse_args().json_data))
 
 if __name__ == "__main__":
     main()
