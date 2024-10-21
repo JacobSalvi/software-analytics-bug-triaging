@@ -7,6 +7,7 @@ import pandas as pd
 import demoji
 import swifter
 import nltk
+from marko.md_renderer import MarkdownRenderer
 from nltk.data import find
 from nltk.stem import WordNetLemmatizer
 import unicodedata
@@ -18,21 +19,7 @@ from src.processing.assignees_processing import filter_assignee_data
 from src.utils import utils
 
 
-
-LEMMATIZER = WordNetLemmatizer()
-STOPWORDS = set(nltk.corpus.stopwords.words('english'))
-
-HTML_TAGS_REGEX = re.compile(r'<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-URL_REGEX = re.compile(r'http[s]?://\S+|www\.\S+')
-EMAIL_REGEX = re.compile(r'\S+@\S+')
-MENTIONS_REGEX = re.compile(r'@\w+')
-HASHTAGS_REGEX = re.compile(r'#\w+')
-REPEATED_CHARS_REGEX = re.compile(r'(.)\1{2,}')
-NUMBERS_REGEX = re.compile(r'\d+')
-NON_WORD_REGEX = re.compile(r'[^\w\s]')
-MODULES_REGEX = re.compile(r'(\w+\.)+\w')
-
-class MdRenderer(marko.md_renderer.MarkdownRenderer):
+class MdRenderer(MarkdownRenderer):
     def render_emphasis(self, element: marko.inline.Emphasis) -> str:
         return f" *{self.render_children(element)}* "
 
@@ -41,17 +28,29 @@ class MdRenderer(marko.md_renderer.MarkdownRenderer):
     
         
 def standardize_string(text: AnyStr) -> AnyStr:
+    lemmatizer = WordNetLemmatizer()
+    stopwords = set(nltk.corpus.stopwords.words('english'))
+
+    html_tags_regex = re.compile(r'<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+    url_regex = re.compile(r'http[s]?://\S+|www\.\S+')
+    email_regex = re.compile(r'\S+@\S+')
+    mentions_regex = re.compile(r'@\w+')
+    hashtags_regex = re.compile(r'#\w+')
+    repeated_chars_regex = re.compile(r'(.)\1{2,}')
+    numbers_regex = re.compile(r'\d+')
+    modules_regex = re.compile(r'(\w+\.)+\w')
+
     text = demoji.replace(text, repl="")
-    text = re.sub(HTML_TAGS_REGEX, '', text)
-    text = re.sub(URL_REGEX, '', text)
-    text = re.sub(EMAIL_REGEX, '', text)
+    text = re.sub(html_tags_regex, '', text)
+    text = re.sub(url_regex, '', text)
+    text = re.sub(email_regex, '', text)
     text = unicodedata.normalize('NFC', text)
     text = contractions.fix(text)
     text = text.lower()
-    text = re.sub(MENTIONS_REGEX, '', text)
-    text = re.sub(HASHTAGS_REGEX, '', text)
-    text = re.sub(REPEATED_CHARS_REGEX, r'\1\1', text)
-    text = re.sub(NUMBERS_REGEX, '', text)
+    text = re.sub(mentions_regex, '', text)
+    text = re.sub(hashtags_regex, '', text)
+    text = re.sub(repeated_chars_regex, r'\1\1', text)
+    text = re.sub(numbers_regex, '', text)
     text = ' '.join(text.split())
     text = text.encode('ascii', 'ignore').decode()
     text = ''.join(
@@ -60,20 +59,20 @@ def standardize_string(text: AnyStr) -> AnyStr:
     )   
     tokens: List[AnyStr] = text.split(" ")
     translation = str.maketrans('', '', string.punctuation)
-    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(MODULES_REGEX, el) else el.translate(translation),
+    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(modules_regex, el) else el.translate(translation),
                  filter(lambda token: len(token) <= 40, tokens)))
     text = " ".join(tokens)
     tokenized_text = nltk.word_tokenize(text)
-    words = [word for word in tokenized_text if word not in STOPWORDS]
-    lemmatized_words = [LEMMATIZER.lemmatize(word) for word in words]
+    words = [word for word in tokenized_text if word not in stopwords]
+    lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
     return ' '.join(lemmatized_words)
     
 def download_necessary_nltk_data():
     try:
-        find('tokenizers/punkt')
+        find('tokenizers/punkt_tab')
     except LookupError:
-        nltk.download('punkt')
-        print("'punkt' downloaded")
+        nltk.download('punkt_tab')
+        print("'punkt_tab' downloaded")
 
     try:
         find('corpora/stopwords')
