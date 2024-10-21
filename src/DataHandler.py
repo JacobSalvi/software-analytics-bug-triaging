@@ -16,6 +16,12 @@ class DataHandler:
     TAR_GZ_FILE_1 = Path(__file__).parent / '../data/raw_parsed_issues_1.tar.gz'
     TAR_GZ_FILE_2 = Path(__file__).parent / '../data/raw_parsed_issues_2.tar.gz'
 
+    COMMITS = Path(__file__).parents[1].joinpath('data/commits_per_user.csv')
+
+    @staticmethod
+    def get_commits() -> DataFrame:
+        return pd.read_csv(DataHandler.COMMITS)
+
     @staticmethod
     def get_raw() -> list:
         combined_data = []

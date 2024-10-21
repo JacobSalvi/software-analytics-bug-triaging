@@ -1,7 +1,8 @@
 import argparse
 import re
+import string
 from pathlib import Path
-from typing import AnyStr
+from typing import AnyStr, List
 import nltk
 from nltk.data import find
 import marko
@@ -11,7 +12,8 @@ import pandas as pd
 import demoji
 import swifter #do not remove!
 from pandas.core.interchange.dataframe_protocol import DataFrame
-from src.processing.assignees_processing import  filter_assignee_data
+from src.processing.assignees_processing import filter_assignee_data
+from src.utils import utils
 
 
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
@@ -25,7 +27,16 @@ class MdRenderer(marko.md_renderer.MarkdownRenderer):
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-    text= re.sub(html_tags_regex, '', text)
+    text = re.sub(html_tags_regex, '', text)
+    https_requests_regex = re.compile('https:\/\/[^\s]+')
+    text = re.sub(https_requests_regex, '', text)
+
+    modules_regex = re.compile('(\w+\.)+\w')
+    tokens: List[AnyStr] = text.split(" ")
+    translation = str.maketrans('', '', string.punctuation)
+    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(modules_regex, el) else el.translate(translation),
+                 filter(lambda token: len(token) <= 40, tokens)))
+    text = " ".join(tokens)
     tokenized_text = nltk.word_tokenize(text)
     stopwords = nltk.corpus.stopwords.words('english')
     words = [word for word in tokenized_text if word not in stopwords]
@@ -72,20 +83,26 @@ def clean_text(block: marko.block.BlockElement):
 
 
 def parse_markdown(text: AnyStr, md_parser=None, renderer=None) -> AnyStr:
-    if text is None:
-        return ""
-    ast = md_parser.parse(text)
-    for child in ast.children:
-        if isinstance(child, marko.block.Heading):
-            clean_text(child)
-        if isinstance(child, marko.block.Paragraph):
-            clean_text(child)
-        if isinstance(child, marko.block.List):
-            clean_text(child)
-        if isinstance(child, marko.block.CodeBlock):
-            pass
+    try:
+        if text is None:
+            return ""
+        ast = md_parser.parse(text)
+        for child in ast.children:
+            if isinstance(child, marko.block.Heading):
+                clean_text(child)
+            if isinstance(child, marko.block.Paragraph):
+                clean_text(child)
+            if isinstance(child, marko.block.List):
+                clean_text(child)
+            if isinstance(child, marko.block.CodeBlock):
+                pass
 
-    return renderer.render(ast)
+        return renderer.render(ast)
+    
+    except Exception as e:
+        print(f"Exception: {e}")  
+        print(f"Problem: \n {text}")  
+        return ""  
 
 
 def remove_pull_request(df: pd.DataFrame) -> pd.DataFrame:
@@ -100,7 +117,7 @@ def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee']]
+    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee', "labels"]]
 
 def store_processed_data(df: pd.DataFrame, output_path: Path):
     df.to_csv(output_path, index=False)
@@ -110,15 +127,16 @@ def data_slicer(df: pd.DataFrame, size: int) -> pd.DataFrame:
     return df.sample(n=size)
 
 
-def process_input(input_file: Path, output_path: Path, compressed: bool = False):
+def process_input(input_file: Path, output_path: Path):
     df = pd.read_json(input_file, lines=True)
     df = process_data(df)
     store_processed_data(df, output_path)
 
-def process_data(df: DataFrame):
+def process_data(df: DataFrame) -> DataFrame:
     download_necessary_nltk_data()
     df = remove_pull_request(df)
     df = pick_columns(df)
+    df["labels"] = df["labels"].apply(lambda arr: [el.get("name") for el in arr])
     df = columns_parsing(df)
     df = filter_assignee_data(df)
     return df
@@ -127,7 +145,8 @@ def main():
     download_necessary_nltk_data()
     parser = argparse.ArgumentParser("Clean up issues")
     parser.add_argument("--file", type=Path, required=True, help="Path to the raw json data")
-    parser.add_argument("--output", default='../data/cleaned_parsed_issues.csv', type=Path, required=False,  help="Path to the output json data")
+    parser.add_argument("--output", default=utils.data_dir().joinpath("cleaned_parsed_issues.csv"),
+                        type=Path, required=False,  help="Path to the output json data")
     args = parser.parse_args()
     process_input(args.file, args.output)
 

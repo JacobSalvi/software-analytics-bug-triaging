@@ -2,6 +2,18 @@ import shutil
 from pathlib import Path
 
 
+def get_model_dir() -> Path:
+    return Path(__file__).parents[1].joinpath("models")
+
+
+def data_dir() -> Path:
+    return Path(__file__).parents[2].joinpath("data")
+
+
+def get_output() -> Path:
+    return Path(__file__).parents[2].joinpath('output')
+
+
 def remove_all_files_and_subdirectories_in_folder(folder_path: Path):
     folder = Path(folder_path)
 
