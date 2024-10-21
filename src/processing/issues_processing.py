@@ -3,20 +3,34 @@ import re
 import string
 from pathlib import Path
 from typing import AnyStr, List
-import nltk
-from nltk.data import find
-import marko
-import marko.inline
-import marko.md_renderer
 import pandas as pd
 import demoji
-import swifter #do not remove!
-from pandas.core.interchange.dataframe_protocol import DataFrame
-from src.processing.assignees_processing import filter_assignee_data
-from src.utils import utils
-import contractions
+import swifter
+import nltk
+from nltk.data import find
 from nltk.stem import WordNetLemmatizer
 import unicodedata
+import contractions
+import marko
+from marko.inline import InlineHTML, Image, Link, AutoLink, RawText
+from marko.block import Heading, Paragraph, List, CodeBlock
+from src.processing.assignees_processing import filter_assignee_data
+from src.utils import utils
+
+
+
+LEMMATIZER = WordNetLemmatizer()
+STOPWORDS = set(nltk.corpus.stopwords.words('english'))
+
+HTML_TAGS_REGEX = re.compile(r'<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+URL_REGEX = re.compile(r'http[s]?://\S+|www\.\S+')
+EMAIL_REGEX = re.compile(r'\S+@\S+')
+MENTIONS_REGEX = re.compile(r'@\w+')
+HASHTAGS_REGEX = re.compile(r'#\w+')
+REPEATED_CHARS_REGEX = re.compile(r'(.)\1{2,}')
+NUMBERS_REGEX = re.compile(r'\d+')
+NON_WORD_REGEX = re.compile(r'[^\w\s]')
+MODULES_REGEX = re.compile(r'(\w+\.)+\w')
 
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
     def render_emphasis(self, element: marko.inline.Emphasis) -> str:
@@ -28,46 +42,30 @@ class MdRenderer(marko.md_renderer.MarkdownRenderer):
         
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
-    html_tags_regex = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-    text = re.sub(html_tags_regex, '', text)
-    https_requests_regex = re.compile('https:\/\/[^\s]+')
-    text = re.sub(https_requests_regex, '', text)
-    text = unicodedata.normalize('NFC', text)    # Unicode normalization
-    text = contractions.fix(text) # Expand contractions can't -> cannot
+    text = re.sub(HTML_TAGS_REGEX, '', text)
+    text = re.sub(URL_REGEX, '', text)
+    text = re.sub(EMAIL_REGEX, '', text)
+    text = unicodedata.normalize('NFC', text)
+    text = contractions.fix(text)
     text = text.lower()
-    url_regex = re.compile(r'http[s]?://\S+|www\.\S+')
-    text = re.sub(url_regex, '', text)
-    email_regex = re.compile(r'\S+@\S+')
-    text = re.sub(email_regex, '', text) # Remove emails
-    lengthened_words_regex = re.compile(r"(.)\1{2,}") # Handling Repeated Characters
-    text = re.sub(lengthened_words_regex, '', text)
-    text = re.sub(r'@\w+', '', text)  # Remove mentions
-    text = re.sub(r'#\w+', '', text)  # Remove hashtags
-    # Remove code snippets
-    text = ''.join(c for c in unicodedata.normalize('NFD', text) # Normalize accented characters
-                   if unicodedata.category(c) != 'Mn')
-    
-    text = re.sub(r'\d+', '', text) # Remove numbers
-    # Remove special characters and punctuation
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = text.replace('\n', ' ').replace('\r', ' ')
+    text = re.sub(MENTIONS_REGEX, '', text)
+    text = re.sub(HASHTAGS_REGEX, '', text)
+    text = re.sub(REPEATED_CHARS_REGEX, r'\1\1', text)
+    text = re.sub(NUMBERS_REGEX, '', text)
     text = ' '.join(text.split())
-    text = text.encode('ascii', 'ignore').decode() # Remove Non-ASCII Characters
-    text = ' '.join(text.split()) # Remove extra whitespace
-    
-    modules_regex = re.compile('(\w+\.)+\w')
+    text = text.encode('ascii', 'ignore').decode()
+    text = ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )   
     tokens: List[AnyStr] = text.split(" ")
     translation = str.maketrans('', '', string.punctuation)
-    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(modules_regex, el) else el.translate(translation),
+    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(MODULES_REGEX, el) else el.translate(translation),
                  filter(lambda token: len(token) <= 40, tokens)))
     text = " ".join(tokens)
     tokenized_text = nltk.word_tokenize(text)
-
-    stopwords = set(nltk.corpus.stopwords.words('english'))
-    words = [word for word in tokenized_text if word not in stopwords]
-
-    lemmatizer = WordNetLemmatizer()
-    lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
+    words = [word for word in tokenized_text if word not in STOPWORDS]
+    lemmatized_words = [LEMMATIZER.lemmatize(word) for word in words]
     return ' '.join(lemmatized_words)
     
 def download_necessary_nltk_data():
@@ -157,7 +155,7 @@ def process_input(input_file: Path, output_path: Path):
     df = process_data(df)
     store_processed_data(df, output_path)
 
-def process_data(df: DataFrame) -> DataFrame:
+def process_data(df: pd.DataFrame) -> pd.DataFrame:
     download_necessary_nltk_data()
     df = remove_pull_request(df)
     df = pick_columns(df)
