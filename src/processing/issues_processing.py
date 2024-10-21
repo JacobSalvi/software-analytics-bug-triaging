@@ -12,8 +12,8 @@ from nltk.stem import WordNetLemmatizer
 import unicodedata
 import contractions
 import marko
-from marko.inline import InlineHTML, Image, Link, AutoLink, RawText
-from marko.block import Heading, Paragraph, List, CodeBlock
+from marko.inline import InlineHTML
+from marko.block import  List
 from src.processing.assignees_processing import filter_assignee_data
 from src.utils import utils
 
