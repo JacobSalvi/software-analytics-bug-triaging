@@ -2,14 +2,12 @@ import argparse
 import os
 from pathlib import Path
 from typing import List, Dict
-from urllib.request import DataHandler
 
 import requests
 from dotenv import load_dotenv
 import pandas as pd
 
 from src.utils import utils
-from src.utils.data_splitter import split_ndjson_file
 
 
 def get_issues_raw_request(token, start_page=0) -> List[Dict]:
