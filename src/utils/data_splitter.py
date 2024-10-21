@@ -1,8 +1,9 @@
 import argparse
 import json
 from pathlib import Path
-from src.DataHandler import DataHandler
+#from src.DataHandler import DataHandler
 
+"""
 def split_ndjson_file(input_file: Path, output_file1: Path, output_file2: Path):
     with open(input_file, 'r') as f:
         data = [json.loads(line) for line in f]
@@ -68,3 +69,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""

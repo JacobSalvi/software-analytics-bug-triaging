@@ -28,6 +28,10 @@ Create a token on github and fill the .env as follows.
 ```shell
 GITHUB_TOKEN=<TOKEN>
 ```
+## Data 
+The programs assume the presence of two folder to store the data and the model 
+
+
 ## Data scraping 
 
 ### Issues scraping 
@@ -53,8 +57,9 @@ python3 ./src/scraper/commits_scraper.py
 ```
 
 ## Data preprocessing
-in order to train and use the model the raw issues data needs to be preprocessed. To do so, run the following command.
-
+In order to train and use the model the raw issues data needs to be preprocessed. To do so, run the following command.
+It will store the preprocessed data in `/data/cleaned_parsed.issues.tar.gz`.
 ```shell
 python3 ./src/DataHandler.py
 ```
+
