@@ -2,13 +2,15 @@ from pathlib import Path
 
 from numpy import floating
 from sympy.codegen import Print
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader
+
 from src.Database import Database
 import os
 import pandas as pd
 import numpy as np
-from transformers import RobertaTokenizer, RobertaModel
+from transformers import RobertaTokenizer, RobertaModel, AdamW
 import torch
-from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.exceptions import NotFittedError
 from typing import List, Any
@@ -21,6 +23,7 @@ from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 class Predictor:
     BATCH_SIZE = 256
     MAX_ITERATION = 500
+    LEARNING_RATE = 2e-5
     SOLVER = 'lbfgs'
     TOLERANCE = 1e-5
 
@@ -61,7 +64,9 @@ class Predictor:
 
         # Initialize label encoder and classifier
         self.label_encoder = LabelEncoder()
-        self.classifier =  LogisticRegression(max_iter=self.MAX_ITERATION, tol=self.TOLERANCE, solver=self.SOLVER, verbose=1)
+        # Optimizer and loss function
+        self.optimizer = AdamW(self.model.parameters(), lr=self.LEARNING_RATE)
+        self.loss_fn = CrossEntropyLoss()
 
         # Load classifier and label encoder if exists
         if os.path.exists(self.CLASSIFIER_PATH) and os.path.exists(self.LABEL_ENCODER_PATH):
@@ -104,7 +109,7 @@ class Predictor:
         # Load training data
         train_df = Database.get_train_set()
 
-        print(f"Training on {len(train_df)} issues with {len(train_df["assignee"].value_counts())} assignees")
+        #print(f"Training on {len(train_df)} issues with {len(train_df["assignee"].value_counts())} assignees")
 
         # Create corpus
         corpus = (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
@@ -112,11 +117,36 @@ class Predictor:
 
         # Encode assignees, use assignees ids as labels
         assignee_ids = Database.extract_assignee_ids(train_df)
-        # labels = self.label_encoder.fit_transform(train_df['assignee'])
         labels = self.label_encoder.fit_transform(assignee_ids)
 
-        # train classifier
-        self.classifier.fit(train_embeddings, labels)
+        train_loader = DataLoader(list(zip(corpus, labels)), batch_size=self.BATCH_SIZE, shuffle=True)
+
+        for epoch in range(self.MAX_ITERATION):
+            epoch_loss = 0
+            for texts, batch_labels in train_loader:
+                preprocessed_texts = [self.preprocess_text(text) for text in texts]
+                inputs = self.tokenizer(
+                    preprocessed_texts,
+                    return_tensors='pt',
+                    padding=True,
+                    truncation=True,
+                    max_length=512
+                ).to(self.device)
+
+                batch_labels = torch.tensor(batch_labels).to(self.device)
+
+                outputs = self.model(**inputs, labels=batch_labels)
+                loss = outputs.loss
+
+                # Backpropagation
+                loss.backward()
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+                epoch_loss += loss.item()
+
+            print(f"Epoch {epoch + 1}/{self.MAX_ITERATION}, Loss: {epoch_loss / len(train_loader)}")
+
         self.save_models()
         self.MODEL_LOADED = True
 
@@ -153,10 +183,22 @@ class Predictor:
             raise e
 
         issue_df.fillna('', inplace=True)
-        query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body']
-        embedding = self.get_embeddings([query_corpus])
+        query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
+        self.model.eval()
+        inputs = self.tokenizer(
+            [query_corpus],
+            return_tensors='pt',
+            padding=True,
+            truncation=True,
+            max_length=512
+        ).to(self.device)
 
-        probs = self.classifier.predict_proba(embedding)[0]
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            logits = outputs.logits
+
+        # Get the probabilities and top N predictions
+        probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
         top_indices = np.argsort(probs)[::-1][:top_n]
         assignees = self.label_encoder.inverse_transform(top_indices)
 
@@ -165,13 +207,32 @@ class Predictor:
     def evaluate(self, test_df: pd.DataFrame) -> floating[Any]:
         if not self.MODEL_LOADED:
             raise NotFittedError("Models are not loaded. Train or load models before making predictions")
-        test_df = test_df.dropna(subset=['title', 'body', 'assignee'])
 
-        test_texts = (test_df['title'] + ' ' + test_df['body']).tolist()
-        test_embeddings = self.get_embeddings(test_texts)
+        test_texts = (test_df['title'] + ' ' + test_df['body'] + ' ' + test_df['labels']).tolist()
+        #test_embeddings = self.get_embeddings(test_texts)
         test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
 
-        predictions = self.classifier.predict(test_embeddings)
-        accuracy = np.mean(predictions == test_labels)
+        self.model.eval()  #
+        predictions = []
+
+        # Tokenize and predict in batches
+        with torch.no_grad():
+            for i in tqdm(range(0, len(test_texts), self.BATCH_SIZE), desc="Evaluating"):
+                batch_texts = test_texts[i:i + self.BATCH_SIZE]
+                inputs = self.tokenizer(
+                    batch_texts,
+                    return_tensors='pt',
+                    padding=True,
+                    truncation=True,
+                    max_length=512
+                ).to(self.device)
+
+                outputs = self.model(**inputs)
+                logits = outputs.logits
+                batch_predictions = torch.argmax(logits, dim=1).cpu().numpy()
+                predictions.extend(batch_predictions)
+
+        # Calculate accuracy
+        accuracy = np.mean(np.array(predictions) == test_labels)
         return accuracy
 
