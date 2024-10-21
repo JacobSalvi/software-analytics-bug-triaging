@@ -2,11 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-#from src.DataHandler import DataHandler
-
-
-#from src.DataHandler import DataHandler
-
+from src.utils.utils import compress_file_to_tar_gz
 
 def split_ndjson_file(input_file: Path, output_file1: Path, output_file2: Path):
     with open(input_file, 'r') as f:
@@ -41,7 +37,6 @@ def check_file_readable(file_path: Path):
         for line in f:
             json.loads(line)
 
-"""
 def divide_json_file(path: Path):
     csv1_path = path.parent / "raw_parsed_issues_1.csv"
     csv2_path = path.parent / "raw_parsed_issues_2.csv"
@@ -50,11 +45,11 @@ def divide_json_file(path: Path):
     try:
         tar_gz1_path = path.parent / "raw_parsed_issues_1.tar.gz"
         with open(csv1_path, 'rb') as file1:
-            DataHandler.compress_file_to_tar_gz(tar_gz1_path, file1, "raw_parsed_issues_1.csv")
+            compress_file_to_tar_gz(tar_gz1_path, file1, "raw_parsed_issues_1.csv")
 
         tar_gz2_path = path.parent / "raw_parsed_issues_2.tar.gz"
         with open(csv2_path, 'rb') as file2:
-            DataHandler.compress_file_to_tar_gz(tar_gz2_path, file2, "raw_parsed_issues_2.csv")
+            compress_file_to_tar_gz(tar_gz2_path, file2, "raw_parsed_issues_2.csv")
 
         csv1_path.unlink()
         csv2_path.unlink()
@@ -63,13 +58,12 @@ def divide_json_file(path: Path):
 
     except Exception as e:
         print(f"An error occurred during compression or deletion: {e}")
-"""
 
 
 def main():
     argument_parser = argparse.ArgumentParser("Data Splitter")
-    argument_parser.add_argument("json_data", type=str, help="the raw JSON file to split and compress")
-    #divide_json_file(Path(argument_parser.parse_args().json_data))
+    argument_parser.add_argument("--json_data", type=str, help="the raw JSON file to split and compress")
+    divide_json_file(Path(argument_parser.parse_args().json_data))
 
 if __name__ == "__main__":
     main()
