@@ -97,14 +97,14 @@ class Predictor:
                 embeddings.append(cls_embeddings)
         return np.vstack(embeddings)
 
-    def train(self, batch_size: int = BATCH_SIZE):
+    def train(self, batch_size: int = BATCH_SIZE,return_embedding:bool = False):
         if os.path.exists(self.MODEL_DIR):
             remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
 
         # Load training data
         train_df = Database.get_train_set()
 
-        print(f"Training on {len(train_df)} issues with {len(train_df["assignee"].value_counts())} assignees")
+        print(f"Training on {len(train_df)} issues with {len(train_df['assignee'].value_counts())} assignees")
 
         # Create corpus
         corpus = (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
@@ -119,6 +119,8 @@ class Predictor:
         self.classifier.fit(train_embeddings, labels)
         self.save_models()
         self.MODEL_LOADED = True
+        if return_embedding :
+            return train_embeddings,labels
 
     def save_models(self):
         joblib.dump(self.classifier, self.CLASSIFIER_PATH)
