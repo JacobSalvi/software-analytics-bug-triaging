@@ -12,6 +12,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.Database import Database
+from src.utils import utils
 from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 
@@ -21,10 +22,10 @@ class Predictor:
     LEARNING_RATE = 2e-5
     TOLERANCE = 1e-5
 
-    MODEL_DIR = Path(__file__).parent.resolve() / "../../models"
-    LABEL_ENCODER_PATH = Path.joinpath(MODEL_DIR, 'label_encoder.joblib')
-    TOKENIZER_PATH = Path.joinpath(MODEL_DIR, 'tokenizer')
-    ROBERTA_MODEL_PATH = Path.joinpath(MODEL_DIR, 'roberta-model')
+    MODEL_DIR = utils.get_model_dir()
+    LABEL_ENCODER_PATH = MODEL_DIR.joinpath( 'label_encoder.joblib')
+    TOKENIZER_PATH = MODEL_DIR.joinpath('tokenizer')
+    ROBERTA_MODEL_PATH = MODEL_DIR.joinpath('roberta-model')
 
     def __init__(self, model_dir: Path = None, use_gpu: bool = True,
                  batch_size: int = BATCH_SIZE, max_iteration: int = MAX_ITERATION,

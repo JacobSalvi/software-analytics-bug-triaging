@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def get_model_dir() -> Path:
-    return Path(__file__).parents[1].joinpath("models")
+    return Path(__file__).parents[2].joinpath("models")
 
 
 def data_dir() -> Path:
