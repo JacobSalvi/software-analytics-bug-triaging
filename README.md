@@ -1,6 +1,7 @@
 # Software-analytics-bug-triaging
 
 ## Setup
+It is to be noted that python3.11 or newer is necessary to run this tool.
 
 ### Virtual environment
 Create virtual environment.
@@ -18,6 +19,11 @@ Install requirements.
 pip install -r requirements.txt
 ```
 
+Add project to the PythonPath.
+```shell
+export PYTHONPATH="$PYTHONPATH:$PWD"
+```
+
 ### Secrets
 Create a .env file.
 ```shell
@@ -28,6 +34,16 @@ Create a token on github and fill the .env as follows.
 ```shell
 GITHUB_TOKEN=<TOKEN>
 ```
+
+### Running the model on the server
+A conda environment with the correct version of python is already present on the server.
+It can be activated as follow:
+```shell
+eval "$(/home/SA24-G1/miniconda3/bin/conda shell.bash hook)"
+```
+It might be necessary to add the project to the PythonPath.
+
+
 ## Data scraping 
 
 ### Issues scraping 
