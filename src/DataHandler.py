@@ -9,6 +9,7 @@ from pandas import DataFrame
 from sympy import false
 
 from src.processing.issues_processing import process_data
+from src.utils.utils import compress_file_to_tar_gz
 
 
 class DataHandler:
@@ -68,7 +69,7 @@ class DataHandler:
             df.to_csv(csv_buffer, index=False)
             csv_buffer.seek(0)
 
-            DataHandler.compress_file_to_tar_gz(
+            compress_file_to_tar_gz(
                 DataHandler.PARSED_TAR_GZ_FILE_PATH,
                 csv_buffer,
                 'cleaned_parsed_issues.csv'
@@ -84,18 +85,6 @@ class DataHandler:
                     return csv_data
 
         raise FileNotFoundError("No CSV file found in the tar.gz archive.")
-
-
-    @staticmethod
-    def compress_file_to_tar_gz(output_filename, file_obj, file_name):
-        with tarfile.open(output_filename, "w:gz") as tar:
-            tarinfo = tarfile.TarInfo(name=file_name)
-            file_obj.seek(0, io.SEEK_END)
-            tarinfo.size = file_obj.tell()
-            file_obj.seek(0)
-            tar.addfile(tarinfo, file_obj)
-
-        return output_filename
 
 
 if __name__ == '__main__':
