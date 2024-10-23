@@ -20,7 +20,7 @@ class Database:
     @staticmethod
     def get_commits_per_user(user: str)  -> int:
         commits = Database.get_commits()
-        return commits[commits['C1'] == user]['C2'].values[0]
+        return commits[commits[0] == user][1].values[0]
 
     @staticmethod
     def get_raw_issues() -> pd.DataFrame:
@@ -43,6 +43,14 @@ class Database:
         if filtered_df.empty:
             raise ValueError(f"No issue found with id: {issue_id}")
 
+        return filtered_df
+
+    @staticmethod
+    def get_issues_by_number(number: int) -> pd.DataFrame:
+        df = Database.get_issues()
+        filtered_df = df[df['number'] == number]
+        if filtered_df.empty:
+            raise ValueError(f"No issue found with number: {number}")
         return filtered_df
 
     @staticmethod
@@ -104,6 +112,7 @@ class Database:
     @staticmethod
     def get_user_by_id(assignee_id: int) -> Optional[str]:
         assignees = Database.get_all_assignees_in_issues()
+        assignees = [ast.literal_eval(assignee) for assignee in assignees]
         return next((assignee for assignee in assignees if assignee.get('id') == assignee_id), None)
 
 

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Callable
 import numpy as np
 import torch
 from torch.optim import AdamW
@@ -142,14 +142,11 @@ class Predictor:
         print(f"Models loaded from {self.MODEL_DIR}")
         self.MODEL_LOADED = True
 
-    def predict_assignees(self, issue_id: int, top_n: int = 5) -> List[str]:
+    def predict_assignees(self, issue_id: int, top_n: int = 5, getter: Callable[[int], pd.DataFrame] = Database.get_issues_by_id) -> List[str]:
         self.load_models()
-        try:
-            issue_df = Database.get_issues_by_id(issue_id)
-        except ValueError as e:
-            raise e
+        issue_df = getter(issue_id)
 
-        issue_df.fillna('', inplace=True)
+        issue_df = issue_df.fillna('' )
         query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
         query_corpus = self.preprocess_text(query_corpus)
         self.model.eval()
@@ -173,6 +170,9 @@ class Predictor:
         assignee_ids = self.label_encoder.inverse_transform(top_indices)
 
         return assignee_ids.tolist()
+
+    def predict_assignees_by_issue_number(self, number_id: int, top_n: int = 5):
+        return self.predict_assignees(number_id, top_n, Database.get_issues_by_number)
 
     def evaluate(self, test_df: pd.DataFrame) -> float:
         self.load_models()
