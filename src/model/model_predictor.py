@@ -23,7 +23,7 @@ def get_user_names_from_user(users: list[str]) -> list[str]:
     return [user.get("login") for user in users]
 
 
-def predict_assignees(issue_id: int, top_n: int, only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 256):
+def predict_assignees(issue_id: int, top_n: int, only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16):
     models_dir = get_chosen_model_dir(only_recent_issues)
     predictor = Predictor(models_dir, use_gpu, batch_size)
     candidates = predictor.predict_assignees(issue_id, top_n)

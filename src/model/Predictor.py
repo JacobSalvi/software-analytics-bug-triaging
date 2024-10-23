@@ -17,10 +17,9 @@ from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 
 class Predictor:
-    BATCH_SIZE = 32
-    MAX_ITERATION = 5
+    BATCH_SIZE = 16
+    EPOCHS = 5
     LEARNING_RATE = 2e-5
-    TOLERANCE = 1e-5
 
     MODEL_DIR = utils.get_model_dir()
     LABEL_ENCODER_PATH = MODEL_DIR.joinpath( 'label_encoder.joblib')
@@ -28,10 +27,8 @@ class Predictor:
     ROBERTA_MODEL_PATH = MODEL_DIR.joinpath('roberta-model')
 
     def __init__(self, model_dir: Path = None, use_gpu: bool = True,
-                 batch_size: int = BATCH_SIZE, max_iteration: int = MAX_ITERATION,
-                 tolerance: float = TOLERANCE):
-        self.MAX_ITERATION = max_iteration
-        self.TOLERANCE = tolerance
+                 batch_size: int = BATCH_SIZE, epochs: int = EPOCHS, learning_rate: float = LEARNING_RATE):
+        self.EPOCHS = epochs
         self.BATCH_SIZE = batch_size
 
         if model_dir is not None:
@@ -43,13 +40,11 @@ class Predictor:
             self.setting_cuda()
 
         print(f"Using device: {self.device}")
-
-        # Initialize label encoder
         self.label_encoder = LabelEncoder()
 
     def setting_cuda(self):
-        pass  # Commented out for now
         # torch.cuda.set_per_process_memory_fraction(0.9)
+        pass
 
     def preprocess_text(self, text: str) -> str:
         return text.lower().strip()
@@ -64,9 +59,9 @@ class Predictor:
         self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         self.model = RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=num_labels)
         self.model.to(self.device)
-        print("Loaded pre-trained tokenizer and RoBERTa model with classification head")
+        print("Loaded standard tokenizer and RoBERTa")
 
-    def train(self, train_df: pd.DataFrame, batch_size: int = BATCH_SIZE):
+    def train(self, train_df: pd.DataFrame):
         if Path.exists(self.MODEL_DIR):
             remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
         train_df = train_df.copy()
@@ -81,9 +76,9 @@ class Predictor:
         self.set_base_model(num_labels)
 
         optimizer = AdamW(self.model.parameters(), lr=self.LEARNING_RATE)
-        train_loader = DataLoader(list(zip(corpus, labels)), batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(list(zip(corpus, labels)), batch_size=self.BATCH_SIZE, shuffle=True)
 
-        for epoch in range(self.MAX_ITERATION):
+        for epoch in range(self.EPOCHS):
             epoch_loss = 0
             self.model.train()
             for texts, batch_labels in train_loader:
@@ -114,7 +109,7 @@ class Predictor:
 
                 epoch_loss += loss.item()
 
-            print(f"Epoch {epoch + 1}/{self.MAX_ITERATION}, Loss: {epoch_loss / len(train_loader)}")
+            print(f"Epoch {epoch + 1}/{self.EPOCHS}, Loss: {epoch_loss / len(train_loader)}")
 
         self.save_models()
         self.MODEL_LOADED = True

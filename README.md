@@ -47,9 +47,9 @@ It might be necessary to add the project to the PythonPath.
 ## Data 
 The programs assume the presence of three folder to store the data and the models, respectively `data`, `models`, `models_recent` folders.
 
-## Data scraping 
-
+## Data scraping
 ### Issues scraping 
+
 To scrape issues from github, run the following command. it will store the scraped data in `/data/raw_parsed_issues.json`. 
 
 ```shell
@@ -87,7 +87,9 @@ Also the pre-processed data is already stored in the repository in `/data/cleane
 Every script subsequent scipt can be run with the following arguments:
 - `--only_recent_issues` : If True, only the recent issues will be used, default is `False`
 - `--use_gpu` : If True, the model will use the GPU. default is `True`
-- `--batch_size` : The batch size for the model, default is `64`
+- `--batch_size` : The batch size for the model, default is `16`
+- `--epochs` : The number of epochs for the model, default is `10`
+- `--lr` : The learning rate for the model, default is `0.001`
 
 ### Model training 
 To train the model, run the following command. It will store the trained model in `/models` folder or `/models_recnt`.
@@ -105,4 +107,9 @@ python3 ./src/model/model_evaluation.py --only_recent_issues False
 To predict the top 5 assignee for a given issue, run the following command. It will print the top 5 assignee.
 ```shell
 python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues False
+```
+## UI 
+To run the UI, run the following command on the console (do not run it in an IDE).
+```shell
+python3  ./src/tui/tui.py
 ```
