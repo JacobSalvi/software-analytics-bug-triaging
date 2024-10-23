@@ -14,7 +14,6 @@ def model_train(evaluate_only_early, use_gpu: bool = True, batch_size: int = 256
 
 if __name__ == '__main__':
     argument_parser = argparse.ArgumentParser("Trainer")
-    argument_parser.add_argument("--only_recent_issues", default=False, help="Evaluate only on early instances")
     argument_parser = add_default_args(argument_parser)
     args = argument_parser.parse_args()
     model_train(**vars(args))
