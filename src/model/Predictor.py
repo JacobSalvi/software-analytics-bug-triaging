@@ -176,6 +176,7 @@ class Predictor:
 
     def evaluate(self, test_df: pd.DataFrame) -> float:
         self.load_models()
+        test_df["body"] = test_df["body"].fillna("")
         test_texts = (test_df['title'] + ' ' + test_df['body'] + ' ' + test_df['labels']).tolist()
         test_texts = [self.preprocess_text(text) for text in test_texts]
         test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
