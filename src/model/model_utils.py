@@ -4,7 +4,9 @@ from src.utils import utils
 
 
 def add_default_args(parser):
-    parser.add_argument("--only_recent_issues", default=False, help="Evaluate only on early instances")
+    parser.add_argument("--only_recent_issues", default=False,
+                        help="Evaluate only on early instances",
+                        action="store_true")
     parser.add_argument("--use_gpu", default=True, help="Use GPU for prediction")
     parser.add_argument("--batch_size", default=64, help="Define the batch size for training")
     return parser
