@@ -66,10 +66,10 @@ class Predictor:
         self.model.to(self.device)
         print("Loaded pre-trained tokenizer and RoBERTa model with classification head")
 
-    def train(self, batch_size: int = BATCH_SIZE):
+    def train(self, train_df: pd.DataFrame, batch_size: int = BATCH_SIZE):
         if Path.exists(self.MODEL_DIR):
             remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
-        train_df = Database.get_train_set().copy()
+        train_df = train_df.copy()
         corpus = self.get_corpus(train_df)
 
         # Encode assignees
@@ -146,7 +146,7 @@ class Predictor:
         self.load_models()
         issue_df = getter(issue_id)
 
-        issue_df = issue_df.fillna('' )
+        issue_df = issue_df.fillna('')
         query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
         query_corpus = self.preprocess_text(query_corpus)
         self.model.eval()

@@ -45,7 +45,7 @@ eval "$(/home/SA24-G1/miniconda3/bin/conda shell.bash hook)"
 It might be necessary to add the project to the PythonPath.
 
 ## Data 
-The programs assume the presence of two folder to store the data and the model, respectively `data` and `models` folders.
+The programs assume the presence of three folder to store the data and the models, respectively `data`, `models`, `models_recent` folders.
 
 ## Data scraping 
 
@@ -84,18 +84,25 @@ python3 ./src/DataHandler.py
 Also the pre-processed data is already stored in the repository in `/data/cleaned_parsed.issues.tar.gz`.
 
 ## Model
-### Model training
-To train the model, run the following command. It will store the trained model in `/models` folder.
+Every script subsequent scipt can be run with the following arguments:
+- `--only_recent_issues` : If True, only the recent issues will be used, default is `False`
+- `--use_gpu` : If True, the model will use the GPU. default is `True`
+- `--batch_size` : The batch size for the model, default is `64`
+
+### Model training 
+To train the model, run the following command. It will store the trained model in `/models` folder or `/models_recnt`.
 ```shell
-python3 ./src/model/moderl_train.py --use_gpu True --batch_size 64
+python3 ./src/model/moderl_train.py --only_recent_issues False 
 ```
+adjust the batch size according to the available GPU memory, if the batch is too large the model will not be able to fit in the GPU memory.
+
 ### Model evaluation
 To evaluate the model, run the following command. It will print the evaluation metrics.
 ```shell
-python3 ./src/model/model_evaluation.py --use_gpu True
+python3 ./src/model/model_evaluation.py --only_recent_issues False 
 ```
 ### Model prediction
 To predict the top 5 assignee for a given issue, run the following command. It will print the top 5 assignee.
 ```shell
-python3 ./src/model/model_predictor.py --issue_id 752417277 --use_gpu True
+python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues False
 ```

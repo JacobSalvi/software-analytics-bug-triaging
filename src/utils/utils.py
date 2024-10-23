@@ -1,3 +1,4 @@
+import io
 import shutil
 import tarfile
 from pathlib import Path
@@ -13,6 +14,9 @@ def data_dir() -> Path:
 
 def get_output() -> Path:
     return Path(__file__).parents[2].joinpath('output')
+
+def get_models_recenet_dir() -> Path:
+    return Path(__file__).parents[2].joinpath('models_recent')
 
 
 def remove_all_files_and_subdirectories_in_folder(folder_path: Path):
