@@ -16,4 +16,4 @@ if __name__ == '__main__':
     argument_parser = argparse.ArgumentParser("Trainer")
     argument_parser = add_default_args(argument_parser)
     args = argument_parser.parse_args()
-    model_train(**vars(args))
+    model_train(evaluate_only_early=args.only_recent_issues, use_gpu=args.use_gpu, batch_size=args.batch_size)
