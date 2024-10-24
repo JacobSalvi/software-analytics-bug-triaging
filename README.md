@@ -55,10 +55,11 @@ To scrape issues from github, run the following command. it will store the scrap
 ```shell
 python3 ./src/scraper/issues_scraper.py
 ```
-The data is already stored in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_issues_2.tar.gz`, so this step is not necessary.
+For convenience, given that the scraping takes a significant amount of time, the data is already stored 
+in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_issues_2.tar.gz`.
 
 ### Issue compressing 
-In order to be store the raw scraped data on Github, we need both to split it and compress it.
+In order to store the raw scraped data on Github, we need both to split it and compress it.
 ```shell
 python3 ./src/utils/data_splitter.py
 ```
@@ -71,7 +72,7 @@ By default, it will store the scraped data in `/data/commits_per_user.csv`.
 ```shell
 python3 ./src/scraper/commits_scraper.py
 ```
-The data is already stored in the repository in `/data/commits_per_user.csv`.
+The data is already stored in the repository in `/data/commits_per_user.csv` for convenience.
 
 ## Data preprocessing
 In order to train and use the model the raw issues data needs to be preprocessed. To do so, run the following command.
@@ -84,7 +85,7 @@ python3 ./src/DataHandler.py
 Also the pre-processed data is already stored in the repository in `/data/cleaned_parsed.issues.tar.gz`.
 
 ## Model
-Every script subsequent scipt can be run with the following arguments:
+Every subsequent script takes the following arguments:
 - `--only_recent_issues` : If True, only the recent issues will be used, default is `False`
 - `--use_gpu` : If True, the model will use the GPU. default is `True`
 - `--batch_size` : The batch size for the model, default is `16`
@@ -92,11 +93,12 @@ Every script subsequent scipt can be run with the following arguments:
 - `--lr` : The learning rate for the model, default is `0.001`
 
 ### Model training 
-To train the model, run the following command. It will store the trained model in `/models` folder or `/models_recnt`.
+To train the model, run the following command. It will store the trained model in the `/models` directory.
+If the '--only_recent_issues' flag is passed the trained data will be saved in `/models_recnt`.
 ```shell
 python3 ./src/model/moderl_train.py --only_recent_issues False 
 ```
-adjust the batch size according to the available GPU memory, if the batch is too large the model will not be able to fit in the GPU memory.
+> :warning: If the batch size is set too high the model will not fit in the GPU memory and the training will fail. Adjust the batch size accordingly.
 
 ### Model evaluation
 To evaluate the model, run the following command. It will print the evaluation metrics.
@@ -105,6 +107,7 @@ python3 ./src/model/model_evaluation.py --only_recent_issues False
 ```
 ### Model prediction
 To predict the top 5 assignee for a given issue, run the following command. It will print the top 5 assignee.
+To be noted that '--issue_id' is the id of the issue and not the issue number.
 ```shell
 python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues False
 ```

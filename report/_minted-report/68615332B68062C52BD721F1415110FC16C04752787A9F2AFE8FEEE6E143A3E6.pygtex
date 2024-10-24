@@ -1,0 +1,4 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PYG{n}{issues\PYGZus{}to\PYGZus{}keep} \PYG{o}{=} \PYG{p}{[}\PYG{n}{issue} \PYG{k}{for} \PYG{n}{issue} \PYG{o+ow}{in} \PYG{n}{issues} \PYG{k}{if} \PYG{n}{issue}\PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{number}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}
+\PYG{o}{\PYGZlt{}}\PYG{o}{=} \PYG{n}{max\PYGZus{}issue\PYGZus{}number} \PYG{o+ow}{and} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{issue}\PYG{p}{[}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{assignees}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{]}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{1}\PYG{p}{]}
+\end{Verbatim}

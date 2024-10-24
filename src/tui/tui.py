@@ -16,7 +16,7 @@ class MainForm(npyscreen.Form):
 
     def create(self):
         self.add(npyscreen.TitleText, name='BugTriaging', editable=False)
-        self.input_field = self.add(npyscreen.TitleText, name='Input:', value='')
+        self.input_field = self.add(npyscreen.TitleText, name='Insert an issue number:', value='')
         self.input_field.when_value_edited = self.limit_to_numbers
         self.results_display = self.add(npyscreen.MultiLineEdit, value='', editable=False, max_height=10)
 
