@@ -28,7 +28,10 @@ class Predictor:
 
     def __init__(self, model_dir: Path = None, use_gpu: bool = True,
                  batch_size: int = BATCH_SIZE, epochs: int = EPOCHS, learning_rate: float = LEARNING_RATE):
+        self.model = None
+        self.tokenizer = None
         self.EPOCHS = epochs
+        self.LEARNING_RATE = learning_rate
         self.BATCH_SIZE = batch_size
 
         if model_dir is not None:
@@ -64,7 +67,6 @@ class Predictor:
     def train(self, train_df: pd.DataFrame):
         if Path.exists(self.MODEL_DIR):
             remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
-        train_df = train_df.copy()
         corpus = self.get_corpus(train_df)
 
         # Encode assignees
@@ -90,10 +92,9 @@ class Predictor:
                     truncation=True,
                     max_length=512
                 )
-                # Move inputs to the device
+
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-                # Ensure batch_labels is a tensor and move to device
                 if not isinstance(batch_labels, torch.Tensor):
                     batch_labels = torch.tensor(batch_labels)
                 batch_labels = batch_labels.to(self.device)
@@ -112,7 +113,6 @@ class Predictor:
             print(f"Epoch {epoch + 1}/{self.EPOCHS}, Loss: {epoch_loss / len(train_loader)}")
 
         self.save_models()
-        self.MODEL_LOADED = True
 
     def save_models(self):
         joblib.dump(self.label_encoder, self.LABEL_ENCODER_PATH)
@@ -121,21 +121,21 @@ class Predictor:
         print(f"Models saved to {self.MODEL_DIR}")
 
     def load_models(self):
-        if os.path.exists(self.LABEL_ENCODER_PATH):
+        if Path.exists(self.LABEL_ENCODER_PATH):
             self.label_encoder = joblib.load(self.LABEL_ENCODER_PATH)
         else:
             raise FileNotFoundError("Label encoder not found")
 
-        if os.path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
+        if Path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
             self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
             self.model = RobertaForSequenceClassification.from_pretrained(self.ROBERTA_MODEL_PATH)
             self.model.to(self.device)
-            print("Loaded tokenizer and RoBERTa model from disk")
+            print("Loaded tokenizer and RoBERTa model")
         else:
             raise FileNotFoundError("Tokenizer or RoBERTa model not found")
 
         print(f"Models loaded from {self.MODEL_DIR}")
-        self.MODEL_LOADED = True
+
 
     def predict_assignees(self, issue_id: int, top_n: int = 5, getter: Callable[[int], pd.DataFrame] = Database.get_issues_by_id) -> List[str]:
         self.load_models()
@@ -144,6 +144,7 @@ class Predictor:
         issue_df = issue_df.fillna('')
         query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
         query_corpus = self.preprocess_text(query_corpus)
+
         self.model.eval()
         inputs = self.tokenizer(
             [query_corpus],

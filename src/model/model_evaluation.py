@@ -4,9 +4,9 @@ from src.Database import Database
 from src.model.model_utils import add_default_args, get_chosen_model_dir
 
 
-def model_evaluation(evaluate_only_early, use_gpu: bool = True, batch_size: int = 16) -> float:
+def model_evaluation(evaluate_only_early, use_gpu: bool = True, batch_size: int = 16,  epochs: int = 5, lr: float = 2e-5) -> float:
     models_dir = get_chosen_model_dir(evaluate_only_early)
-    predictor = Predictor(models_dir, use_gpu, batch_size)
+    predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
     predictor.load_models()
     try:
         test_df = Database.get_test_set()

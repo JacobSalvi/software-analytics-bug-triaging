@@ -1,10 +1,8 @@
 import argparse
-from pathlib import Path
 
 from src.Database import Database
 from src.model.Predictor import Predictor
 from src.model.model_utils import add_default_args, get_chosen_model_dir
-from src.utils import utils
 
 
 def print_candidates(candidates: list[str], issue_id: int):
@@ -23,9 +21,9 @@ def get_user_names_from_user(users: list[str]) -> list[str]:
     return [user.get("login") for user in users]
 
 
-def predict_assignees(issue_id: int, top_n: int, only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16):
+def predict_assignees(issue_id: int, top_n: int, only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16, epochs: int = 5, lr: float = 2e-5):
     models_dir = get_chosen_model_dir(only_recent_issues)
-    predictor = Predictor(models_dir, use_gpu, batch_size)
+    predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
     candidates = predictor.predict_assignees(issue_id, top_n)
     return candidates
 
