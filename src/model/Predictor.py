@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import List, Callable
 import numpy as np
@@ -16,17 +15,12 @@ from src.utils import utils
 from src.utils.utils import remove_all_files_and_subdirectories_in_folder
 
 
+BATCH_SIZE = 16
+EPOCHS = 5
+LEARNING_RATE = 2e-5
+
 class Predictor:
-    BATCH_SIZE = 16
-    EPOCHS = 5
-    LEARNING_RATE = 2e-5
-
-    MODEL_DIR = utils.get_model_dir()
-    LABEL_ENCODER_PATH = MODEL_DIR.joinpath( 'label_encoder.joblib')
-    TOKENIZER_PATH = MODEL_DIR.joinpath('tokenizer')
-    ROBERTA_MODEL_PATH = MODEL_DIR.joinpath('roberta-model')
-
-    def __init__(self, model_dir: Path = None, use_gpu: bool = True,
+    def __init__(self, model_dir: Path = utils.get_model_dir(), use_gpu: bool = True,
                  batch_size: int = BATCH_SIZE, epochs: int = EPOCHS, learning_rate: float = LEARNING_RATE):
         self.model = None
         self.tokenizer = None
@@ -34,9 +28,11 @@ class Predictor:
         self.LEARNING_RATE = learning_rate
         self.BATCH_SIZE = batch_size
 
-        if model_dir is not None:
-            self.MODEL_DIR = model_dir
-        os.makedirs(self.MODEL_DIR, exist_ok=True)
+        self.model_dir = model_dir
+        self.model_dir.mkdir(exist_ok=True)
+        self.label_encoder_path = self.model_dir.joinpath('label_encoder.joblib')
+        self.tokenizer_path = self.model_dir.joinpath('tokenizer')
+        self.roberta_model_path = self.model_dir.joinpath('roberta-model')
 
         self.device = torch.device('cuda' if torch.cuda.is_available() and use_gpu else 'cpu')
         if self.device.type == 'cuda':
@@ -65,8 +61,8 @@ class Predictor:
         print("Loaded standard tokenizer and RoBERTa")
 
     def train(self, train_df: pd.DataFrame):
-        if Path.exists(self.MODEL_DIR):
-            remove_all_files_and_subdirectories_in_folder(self.MODEL_DIR)
+        if self.model_dir.exists():
+            remove_all_files_and_subdirectories_in_folder(self.model_dir)
         corpus = self.get_corpus(train_df)
 
         # Encode assignees
@@ -115,26 +111,26 @@ class Predictor:
         self.save_models()
 
     def save_models(self):
-        joblib.dump(self.label_encoder, self.LABEL_ENCODER_PATH)
-        self.tokenizer.save_pretrained(self.TOKENIZER_PATH)
-        self.model.save_pretrained(self.ROBERTA_MODEL_PATH)
-        print(f"Models saved to {self.MODEL_DIR}")
+        joblib.dump(self.label_encoder, self.label_encoder_path)
+        self.tokenizer.save_pretrained(self.tokenizer_path)
+        self.model.save_pretrained(self.roberta_model_path)
+        print(f"Models saved to {self.model_dir}")
 
     def load_models(self):
-        if Path.exists(self.LABEL_ENCODER_PATH):
-            self.label_encoder = joblib.load(self.LABEL_ENCODER_PATH)
+        if self.label_encoder_path.exists():
+            self.label_encoder = joblib.load(self.label_encoder_path)
         else:
             raise FileNotFoundError("Label encoder not found")
 
-        if Path.exists(self.TOKENIZER_PATH) and os.path.exists(self.ROBERTA_MODEL_PATH):
-            self.tokenizer = RobertaTokenizer.from_pretrained(self.TOKENIZER_PATH)
-            self.model = RobertaForSequenceClassification.from_pretrained(self.ROBERTA_MODEL_PATH)
+        if self.tokenizer_path.exists() and self.roberta_model_path.exists():
+            self.tokenizer = RobertaTokenizer.from_pretrained(self.tokenizer_path)
+            self.model = RobertaForSequenceClassification.from_pretrained(self.roberta_model_path)
             self.model.to(self.device)
             print("Loaded tokenizer and RoBERTa model")
         else:
             raise FileNotFoundError("Tokenizer or RoBERTa model not found")
 
-        print(f"Models loaded from {self.MODEL_DIR}")
+        print(f"Models loaded from {self.model_dir}")
 
 
     def predict_assignees(self, issue_id: int, top_n: int = 5, getter: Callable[[int], pd.DataFrame] = Database.get_issues_by_id) -> List[str]:
