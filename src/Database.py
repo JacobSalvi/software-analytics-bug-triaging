@@ -129,12 +129,9 @@ class Database:
         return combined_string
 
 
-
-if __name__ == '__main__':
-
+def main():
     df = Database.get_test_set()
     pass
 
-
-
-
+if __name__ == '__main__':
+    main()
