@@ -22,5 +22,8 @@ if __name__ == '__main__':
     argument_parser = argparse.ArgumentParser("Evaluation")
     argument_parser = add_default_args(argument_parser)
     args = argument_parser.parse_args()
-    print_statistics(model_evaluation(**vars(args)))
+    evaluation = model_evaluation(evaluate_only_early=args.only_recent_issues,
+                                  use_gpu=args.use_gpu,
+                                  batch_size=args.batch_size)
+    print_statistics(evaluation)
 
