@@ -11,6 +11,7 @@ def model_train(only_recent_issues: bool, use_gpu: bool = True, batch_size: int 
     models_dir = get_chosen_model_dir(only_recent_issues)
     predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
     df = Database.get_train_set() if not only_recent_issues else Database.get_recent_instances()
+    df["body"] = df["body"].fillna("")
     predictor.train(df)
 
 if __name__ == '__main__':
