@@ -271,7 +271,7 @@ if __name__ == '__main__':
         train_recent = train_recent.sample(n=1000, random_state=42)
     predictor_recent.train(train_recent)
     test_recent = Database.get_test_set(train_recent)
-    result = predictor_recent.evaluate(test_recent).get("accuracy", 0) * 100
+    result = predictor_recent.evaluate(test_recent).get("accuracy", 0)
     print(f"Test Accuracy predictor recent: {result * 100:.2f}%")
 
 
