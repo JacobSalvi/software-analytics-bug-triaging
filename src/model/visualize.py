@@ -17,7 +17,6 @@ def plot_tsne(embeddings: np.ndarray, labels: List[str]):
     if n_samples <= 1:
         raise ValueError("Need at least two samples for t-SNE.")
     elif n_samples < 5:
-        print("Warning: Number of samples is very small. t-SNE may not provide meaningful visualization.")
         perplexity = max(1, n_samples - 1)
     else:
         perplexity = min(30, n_samples - 1)

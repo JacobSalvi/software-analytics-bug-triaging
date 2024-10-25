@@ -120,6 +120,12 @@ To be noted that '--issue_id' is the id of the issue and not the issue number.
 ```shell
 python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues
 ```
+
+## Visualization
+To visualize cluster of the data, run the following command.
+```shell
+python3 ./src/visualization/visualization.py
+```
 ## UI 
 To run the UI, run the following command on the console (do not run it in an IDE).
 ```shell
