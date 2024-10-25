@@ -58,7 +58,7 @@ def get_assignees_logins(assignees: List[AnyStr]) -> List[str]:
             if 'login' in (assignee_dict:= ast.literal_eval(assignee)):
                 logins.append(assignee_dict['login'])
         except Exception as e:
-            print("Exception: {e}")
+            print(f"Exception: {str(e)}")
             print(assignee)        
     return logins
 

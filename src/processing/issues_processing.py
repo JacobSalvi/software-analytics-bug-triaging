@@ -91,20 +91,6 @@ def standardize_string(text: AnyStr) -> AnyStr:
     return ' '.join(lemmatized_words)
 
 
-def download_necessary_nltk_data():
-    try:
-        find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt')
-        print("'punkt' downloaded")
-
-    try:
-        find('corpora/stopwords')
-    except LookupError:
-        nltk.download('stopwords')
-        print("'stopwords' downloaded")
-
-
 def clean_text(block: marko.block.BlockElement):
     if isinstance(block, str):
         return
