@@ -211,7 +211,7 @@ The correlation between recall and predictions is 0.77 which give quite a strong
 \end{table}
 
 \subsection*{Clusters}
-\subsubsection{Train set issues cluster}
+\subsubsection*{Train set issues cluster}
 We thought it could have been interesting to see how the issues and assignee are clustered.\\
 From the following image can be observed that the issues form quite well defined and disjointed clusters around their assigned Assignee.\\
 It would thus be natural to attempt to classify new documents based on these clusters to assign them to a user.\\
@@ -222,7 +222,7 @@ The image below represent a sample of the train set.
 	\caption{Clustering of issues in relation to assignees}
 	\includegraphics[width=\textwidth]{plot.png}
 \end{table}
-\subsubsection{Recent issues cluster}
+\subsubsection*{Recent issues cluster}
 The image below illustrates a sample of the training set. It is evident that the clusters are less well-defined in this instance. This ambiguity could contribute to the lower accuracy observed with recent issues. Additionally, there may be increased variability between assignees and issue documents.
 \begin{table}[H]
 	\centering
@@ -230,12 +230,6 @@ The image below illustrates a sample of the training set. It is evident that the
 	\includegraphics[width=\textwidth]{plot_sparse.png}
 \end{table}
 
-
-\begin{table}[H]
-	\centering
-	\caption{Clustering of issues in relation to assignees}
-	\includegraphics[width=\textwidth]{plot_sparse.png}
-\end{table}
 \section*{Interface}
 We included a simple terminal-based interface to query the top five most likely assignee given an issue number.\\
 We opted for this kind of interface instead of a web based approach since this can easily be run on the server but still allows for a degree of interaction.
