@@ -1,3 +1,4 @@
+## CORRECT
 import argparse
 import os
 from pathlib import Path
@@ -34,7 +35,7 @@ def get_issues_raw_request(token: str, start_page: int = 0, max_issue_number: in
                               and len(issue["assignees"]) == 1]
 
             if current_page % 100 == 0:
-                if not save_intermediate_json:
+                if save_intermediate_json:
                     print(f"Saving up to page {current_page}, number of issues {len(parsed_issues)}")
                     output = utils.data_dir()
                     parsed_json = output.joinpath(f"parsed_issues_{current_page}.json")
