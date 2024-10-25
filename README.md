@@ -98,6 +98,7 @@ If the '--only_recent_issues' flag is passed the trained data will be saved in `
 ```shell
 python3 ./src/model/model_train.py --only_recent_issues
 ```
+
 The below command will train the model on the recent issues and all issues, and automatically test the accuracy of the models.
 ```shell
 python3 ./src/model/Predictor.py 
@@ -108,7 +109,7 @@ python3 ./src/model/Predictor.py
 ### Model evaluation
 To evaluate the model, run the following command. It will print the evaluation metrics.
 ```shell
-python3 ./src/model/model_evaluation.py  
+python3 ./src/model/model_evaluation.py --only_recent_issues
 ```
 ### Model prediction
 To predict the top 5 assignee for a given issue, run the following command. It will print the top 5 assignee.
