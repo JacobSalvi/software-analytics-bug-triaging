@@ -68,16 +68,16 @@ def get_sample_bug_reports(n: int = 10) -> pd.DataFrame:
     return sample_bug_reports
 
 def main():
-
     predictor = Predictor()
+    predictor.load_models()
 
     sample_bug_reports = get_sample_bug_reports(n=10)
 
-    embeddings = predictor.get_data_embeddings(sample_bug_reports)
+    embeddings, _ = predictor.get_data_embeddings(sample_bug_reports)
 
     labels = []
     for idx, row in sample_bug_reports.iterrows():
-        issue_id = row['issue_id']  # Replace 'issue_id' with your actual issue ID column name
+        issue_id = row['id']  
         try:
             top_assignees = predictor.predict_assignees(issue_id, top_n=1)
             if top_assignees and top_assignees[0]:
