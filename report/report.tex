@@ -20,7 +20,7 @@
 
 \title{\textbf{Software Analytics\\Bug Triaging}}
 
-\author{Joy Albertini, Jacob Salvi,Adam Kasperski,Anuj Kumar}
+\author{Joy Albertini, Jacob Salvi, Adam Kasperski, Anuj Kumar}
 \date{}
 
 
@@ -55,15 +55,20 @@ We saved all of the issues data as received in a json file to be used for the pr
 We also saved the number of commits per user, but limiting our search to the commits in the 'main' branch.
 
 
-\section*{Pre-processing}
-The data had to be pre-processed before being given to the model for training.\\ 
-Of all the information we retrieved in the previous step we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee' and the 'labels'.\\
-The title and body required the most pre-processing given that they contain the bulk of the text.\\
-Given that the bodies of the issues were written in markdown we used a markdown library to parse them.\\
- Some elements, such as html tags, links and images have been removed during the parsing. Code blocks have been preserved.\\
-The main parts that have been modified then are headings, paragraphs and lists.\\
-The text in these elements were converted to lowercase and had stop-words removed. Further we proceeded to use lemmatization instead of stemming as it preserves the meaning of the text thus maintaining the readability which is pivotal for the bug classification.\\
-Other elements, such as emojis, html tags, url tags and email tags have also been removed to decrease the noise in the data. Punctuations have also been removed, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names.\\
+\section*{Pre processing}
+
+The data had to be pre-processed before being given to the model for training.  
+Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.  
+The title and body required the most preprocessing, given that they contain the bulk of the text.  
+From the raw data we obtained, we first removed pull requests.  
+Given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.  
+Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.  
+The main parts that have been modified then are headings, paragraphs, and lists.
+
+All text was converted to lowercase, and contractions were expanded to standardize word forms. Emojis and special characters were removed to decrease noise in the data, and any residual URLs and email addresses were eliminated. Mentions and hashtags were removed as well. We also normalized whitespace by collapsing multiple spaces into a single space, and we removed the diacritics.  
+The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.  
+We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
+
 
 
 \section*{Predictor}
