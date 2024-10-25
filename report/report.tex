@@ -54,6 +54,9 @@ That said, it seems that the github api itself has a small bug. Page 1921 had an
 We saved all of the issues data as received in a json file to be used for the preprocessing. Having all the raw data allowed us to study which part of the data was useful without having to fetch it again.\\
 
 We also saved the number of commits per user, but limiting our search to the commits in the 'main' branch.
+\subsection*{Commits collections}
+We extracted commits from the \textbf{main branch} using the GitHub API. Attempting to extract commits from \textbf{all branches} proved challenging due to the high number of commits and GitHub API rate limits. To overcome this, we utilized the \texttt{git log} command to retrieve all commits locally. However, mapping these commits to usernames was difficult because many commits lacked author names and email addresses. We considered fetching usernames by commit SHA through the API, but the rate limits again restricted this method. Consequently, extracting commits from all branches was limited by API constraints and incomplete author information.
+
 
 
 \section*{Pre processing}
