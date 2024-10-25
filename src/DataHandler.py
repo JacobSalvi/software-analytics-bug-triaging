@@ -1,3 +1,4 @@
+#ORRECT
 import json
 import os
 import tarfile
@@ -27,6 +28,14 @@ class DataHandler:
     @staticmethod
     def get_raw() -> list:
         combined_data = []
+
+        if not Path(DataHandler.TAR_GZ_FILE_1).exists():
+            raise FileNotFoundError(f"The file {DataHandler.TAR_GZ_FILE_1.name} does not exist, "
+                                    f"please execute the scraper first issue_scraper.py and or data_splitter.py")
+
+        if not Path(DataHandler.TAR_GZ_FILE_2).exists():
+            raise FileNotFoundError(f"The file {DataHandler.TAR_GZ_FILE_2.name} does not exist, "
+                                    f"please execute the scraper first issue_scraper.py and or data_splitter.py")
 
         combined_data.extend(
             DataHandler.extract_json_from_tar(DataHandler.TAR_GZ_FILE_1))
@@ -89,4 +98,7 @@ class DataHandler:
 
 
 if __name__ == '__main__':
-    DataHandler.get_parsed(True)
+    try:
+        DataHandler.get_parsed()
+    except FileNotFoundError as e:
+        print(e)
