@@ -4,6 +4,7 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{graphicx}
+\usepackage{booktabs}
 \usepackage{minted}
 \usepackage[dvipsnames]{xcolor}
 \definecolor{LightGray}{gray}{0.95}
@@ -82,10 +83,114 @@ Finally, we decided to use the 'RobertaForSequenceClassification' as our base mo
 
 \section*{Results}
 \subsection*{All issues}
-With all issues included in the training corpus the model took multiple hours to train and we achieved an accuracy of roughly \textbf{61\%}.
+With all issues included in the training corpus the model took multiple hours to train and we achieved an accuracy of roughly \textbf{61\%}.\\
+In the following table we can observe some statistics about the performance of the model per each assignee.\\
+The precision is simply given by the ratio between correct predictions and total predictions, while the recall measures how many issues that should have been assigned to a given assignee were actually assigned to him.\\
+There seems to be a correlation between the number of predictions and the precision and between the recall and the number of predictions.\\
+We used a simple python script to calculate this correlation:
+\begin{minted}{python}
+	....
+    df = pd.DataFrame(data)
+    tau, p_value = kendalltau(df['Total Predictions'], df['Precision'])
+    print(f"Correlation coefficient: {tau}")
+\end{minted}
+
+And we get a correlation coefficient of $0.45\sim$ for the precision and $0.67\sim$ for the recall, meaning that there is a weak correlation between precision and number of predictions and a moderate correlation between the recall and the number of predictions.\\
+This result is slightly surprising since we expected a sharper correlation between the computed statistics and the number of predictions.
+
+
+\begin{table}[H]
+    \centering
+    \caption{Assignee performance for all issues.}
+    \begin{tabular}{@{}lcccccc@{}}
+        \toprule
+        Assignee & Precision & Recall & Total Predictions & Correct Predictions \\ \midrule
+        lszomoru       & 0.894  & 0.664  & 104 & 93  \\
+        mjbvz          & 0.804  & 0.862  & 419 & 337 \\
+        meganrogge     & 0.790  & 0.716  & 252 & 199 \\
+        sandy081       & 0.766  & 0.810  & 184 & 141 \\
+        rzhao271       & 0.760  & 0.514  & 25  & 19  \\
+        andreamah      & 0.729  & 0.507  & 48  & 35  \\
+        Yoyokrazy      & 0.714  & 0.286  & 14  & 10  \\
+        benibenj       & 0.704  & 0.241  & 27  & 19  \\
+        lramos15       & 0.703  & 0.683  & 101 & 71  \\
+        hediet         & 0.692  & 0.365  & 39  & 27  \\
+        roblourens     & 0.688  & 0.661  & 298 & 205 \\
+        Tyriar         & 0.615  & 0.770  & 169 & 104 \\
+        jrieken        & 0.585  & 0.703  & 142 & 83  \\
+        aiday-mar      & 0.571  & 0.327  & 28  & 16  \\
+        aeschli        & 0.567  & 0.529  & 97  & 55  \\
+        connor4312     & 0.548  & 0.479  & 84  & 46  \\
+        alexr00        & 0.450  & 0.545  & 80  & 36  \\
+        justschen      & 0.444  & 0.302  & 36  & 16  \\
+        alexdima       & 0.436  & 0.459  & 39  & 17  \\
+        TylerLeonhardt & 0.430  & 0.623  & 100 & 43  \\
+        deepak1556     & 0.417  & 0.495  & 120 & 50  \\
+        rebornix       & 0.412  & 0.519  & 34  & 14  \\
+        bpasero        & 0.342  & 0.534  & 184 & 63  \\
+        amunger        & 0.333  & 0.429  & 18  & 6   \\
+        chrmarti       & 0.259  & 0.259  & 27  & 7   \\
+        joaomoreno     & 0.255  & 0.394  & 51  & 13  \\
+        sbatten        & 0.241  & 0.875  & 29  & 7   \\
+        daviddossett   & 0.200  & 0.071  & 5   & 1   \\
+        ulugbekna      & 0.176  & 0.261  & 34  & 6   \\
+        bhavyaus       & 0.056  & 0.167  & 72  & 4   \\
+        isidorn        & 0.000  & 0.000  & 4   & 0   \\
+        dbaeumer       & 0.000  & 0.000  & 2   & 0   \\
+        DonJayamanne   & 0.000  & 0.000  & 1   & 0   \\
+        karthiknadig   & 0.000  & 0.000  & 0   & 0   \\
+        joyceerhl      & 0.000  & 0.000  & 8   & 0   \\ \bottomrule
+    \end{tabular}
+\end{table}
 
 \subsection*{Recent issues}
-Limiting our training to recent issues, the model was significantly faster to train and we achieved an accuracy of roughly \textbf{ 55\%}.
+Limiting our training to recent issues, the model was significantly faster to train and we achieved an accuracy of roughly \textbf{ 57\%}.\\
+The correlation between precision and number of prediction is slightly better at 0.48, but it is still weak.\\
+The correlation between recall and predictions is 0.77 which give quite a strong correlation.
+
+\begin{table}[H]
+    \centering
+    \caption{Assignee performance for recent issues.}
+    \begin{tabular}{@{}lcccccc@{}}
+        \toprule
+        Assignee & Precision & Recall & Total Predictions & Correct Predictions \\ \midrule
+        lszomoru       & 0.782 & 0.743  & 133 & 104 \\
+        mjbvz          & 0.768 & 0.752  & 383 & 294 \\
+        sandy081       & 0.728 & 0.770  & 184 & 134 \\
+        Tyriar         & 0.713 & 0.533  & 101 & 72  \\
+        roblourens     & 0.691 & 0.648  & 291 & 201 \\
+        amunger        & 0.667 & 0.143  & 3   & 2   \\
+        meganrogge     & 0.667 & 0.856  & 357 & 238 \\
+        benibenj       & 0.667 & 0.228  & 27  & 18  \\
+        andreamah      & 0.644 & 0.551  & 59  & 38  \\
+        aiday-mar      & 0.636 & 0.286  & 22  & 14  \\
+        lramos15       & 0.575 & 0.663  & 120 & 69  \\
+        TylerLeonhardt & 0.571 & 0.464  & 56  & 32  \\
+        jrieken        & 0.548 & 0.585  & 126 & 69  \\
+        Yoyokrazy      & 0.533 & 0.229  & 15  & 8   \\
+        alexr00        & 0.510 & 0.394  & 51  & 26  \\
+        justschen      & 0.500 & 0.302  & 32  & 16  \\
+        connor4312     & 0.488 & 0.438  & 86  & 42  \\
+        aeschli        & 0.454 & 0.471  & 108 & 49  \\
+        rzhao271       & 0.436 & 0.459  & 39  & 17  \\
+        rebornix       & 0.421 & 0.889  & 57  & 24  \\
+        bpasero        & 0.359 & 0.475  & 156 & 56  \\
+        joaomoreno     & 0.325 & 0.394  & 40  & 13  \\
+        deepak1556     & 0.301 & 0.574  & 193 & 58  \\
+        alexdima       & 0.298 & 0.459  & 57  & 17  \\
+        chrmarti       & 0.273 & 0.111  & 11  & 3   \\
+        ulugbekna      & 0.235 & 0.174  & 17  & 4   \\
+        hediet         & 0.222 & 0.405  & 135 & 30  \\
+        sbatten        & 0.174 & 0.500  & 23  & 4   \\
+        isidorn        & 0.000 & 0.000  & 0   & 0   \\
+        dbaeumer       & 0.000 & 0.000  & 0   & 0   \\
+        DonJayamanne   & 0.000 & 0.000  & 0   & 0   \\
+        karthiknadig   & 0.000 & 0.000  & 0   & 0   \\
+        bhavyaus       & 0.000 & 0.000  & 1   & 0   \\
+        daviddossett   & 0.000 & 0.000  & 0   & 0   \\
+        joyceerhl      & 0.000 & 0.000  & 0   & 0   \\ \bottomrule
+    \end{tabular}
+\end{table}
 
 \section*{Interface}
 We included a simple terminal-based interface to query the top five most likely assignee given an issue number.\\
