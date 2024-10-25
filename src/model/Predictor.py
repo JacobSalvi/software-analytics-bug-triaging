@@ -8,6 +8,7 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report, confusion_matrix
 import joblib
 import pandas as pd
 from tqdm import tqdm
@@ -175,20 +176,45 @@ class Predictor:
         test_corpus = [preprocess_text(text) for text in test_corpus]
 
         test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
+        unique_labels = np.unique(test_labels)
+        label_names = self.label_encoder.inverse_transform(unique_labels)
+
         self.model.eval()
         predictions = []
-
         # Tokenize and predict in batches
         with torch.no_grad():
             for i in tqdm(range(0, len(test_corpus), self.BATCH_SIZE), desc="Evaluating"):
                 batch_texts = test_corpus[i:i + self.BATCH_SIZE]
                 inputs = self.tokenize(batch_texts)
                 outputs = self.model(**inputs)
-                logits = outputs.logits
+                logits = outputs.logits                
                 current_predictions = torch.argmax(logits, dim=1).cpu().numpy()
                 predictions.extend(current_predictions)
-        accuracy = np.mean(np.array(predictions) == test_labels)
-        return accuracy
+                    
+        predictions = np.array(predictions)
+        results = {}    
+        results['accuracy'] = np.mean(predictions == test_labels)
+        try:
+            results['classification_report'] = classification_report(
+                test_labels,
+                predictions,
+                labels=unique_labels,
+                target_names=label_names,
+                output_dict=True,
+                zero_division=0
+                )
+        except Exception as e:
+            print(f"Warning: Could not generate classification report: {str(e)}")
+            results['classification_report'] = None
+
+        conf_matrix = confusion_matrix(test_labels, predictions, labels=unique_labels)
+        total_predictions_per_class = conf_matrix.sum(axis=0)
+        correct_predictions_per_class = np.diag(conf_matrix)
+        predictions_per_class = {label: int(count) for label, count in zip(label_names, total_predictions_per_class)}
+        correct_predictions_class = {label: int(count) for label, count in zip(label_names, correct_predictions_per_class)}
+        results['predictions_per_class'] = predictions_per_class
+        results['correct_predictions_per_class'] = correct_predictions_class
+        return results
 
 
     def get_data_embeddings(self, data_df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
