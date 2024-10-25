@@ -1,5 +1,8 @@
 # Software-analytics-bug-triaging
 
+# Download the models 
+the models can be downloaded from the following link: https://1drv.ms/u/s!AjZv2fgaLt2FyJxIPbxRrrumUckCiQ?e=fJQMir
+The folder should be unzipped and placed  in the `models` folder and the other in the `models_recent` folder respectively.
 ## Setup
 It is to be noted that python3.11 or newer is necessary to run this tool.
 Run every script in the order given below.
