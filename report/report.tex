@@ -73,15 +73,34 @@ All text was converted to lowercase, and contractions were expanded to standardi
 The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.  
 We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
 
-\section*{Predictor}
-Even though we kept seven columns during preprocessing we actually used only four for training. These four are the 'title', 'body', 'labels' and 'assignee'.\\
-The reasoning behind using the 'title' and 'body' is pretty straightforward, these two columns contain the most information about the issue and are thus of the utter most importance. \\
-We need to pass the 'assignee' in order to predict future assignees, we only used the assignee 'id' since it being a number didn't require any particular encoding for the training and could easily be mapped back to an assignee name.
-After a few attempts, interleaved with improvement of the preprocessing, we decided to include the issues labels in the corpus used to train the model. Our reasoning is based on the fact that an user is likely to work on similar issues, and therefore be assigned issues with similar labels.\\
-That said, particularly new issues might not have had any label assigned to them yet.\\
-In the first iteration we made use of logistic regression for the bug classification which led to an accuracy of 30\% . Upon further reading we realized that logistic regression struggles with high dimensional embeddings provided by Roberta further it also does not handle well overlapping boundaries like assignees solving similar bugs and leads to incorrect classification. These aspects limited the improvements that could be made to improve accuracy.\\
-Finally, we decided to use the 'RobertaForSequenceClassification' as our base model for the training. This was a much better choice as it overcomes the limitations of logistic regression which lead to a much better accuracy for the model.
+\section*{Pre processing}
+The data had to be pre-processed before being given to the model for training.
+Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.
+The title and body required the most preprocessing, given that they contain the bulk of the text.
+From the raw data we obtained, we first removed pull requests.
+Given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.
+Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.
+The main parts that have been modified then are headings, paragraphs, and lists.
 
+All text was converted to lowercase, and contractions were expanded to standardize word forms. Emojis and special characters were removed to decrease noise in the data, and any residual URLs and email addresses were eliminated. Mentions and hashtags were removed as well. We also normalized whitespace by collapsing multiple spaces into a single space, and we removed the diacritics.
+The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.
+We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
+
+\section*{Predictor} We built our predictor using the base RoBERTa model, which has up to 125 million parameters. With 128 thousand documents and 78 different labels, RoBERTa was more than capable of handling our needs with plenty of room to spare.
+
+\subsection{Predictor Variables and Corpus} During the development of our model, we experimented with various predictor variables to determine the most effective ones for predicting assignees. Initially, we included seven columns during preprocessing but soon narrowed it down to four key features: \texttt{title}, \texttt{body}, \texttt{labels}, and \texttt{assignee}.
+
+The \texttt{title} and \texttt{body} were essential as they contain the core information about each issue, providing the necessary context for the model to understand the problem. Including \texttt{labels} helped categorize issues, allowing the model to associate specific types of issues with relevant assignees. However, we recognized that newer issues might lack labels, which could impact prediction accuracy.
+
+After several iterations and refining our preprocessing steps, we decided to incorporate issue labels into the training corpus. We believed that users are likely to work on similar issues and thus be assigned tasks with corresponding labels. Nonetheless, the absence of labels in newer issues presented a challenge for maintaining consistent prediction performance.
+
+\subsection{Embedding} Our Predictor uses a \texttt{LabelEncoder} to convert assignee IDs into numerical labels, facilitating their use in classification tasks. The core of our model is the RoBERTa-based sequence classification setup, which we configured with the appropriate number of output labels based on our unique assignees. We opted to use just the assignee \texttt{id} since it's already a number, eliminating the need for any special encoding and allowing us to easily map it back to the assignee's name. RoBERTa's strong language understanding helps the model identify patterns and relationships in the text, enabling it to predict assignees accurately.
+
+\subsection{Training} Training the model involves running through the dataset multiple times, known as epochs. In each epoch, the model processes batches of data, makes predictions, and calculates loss values. These loss values are then used to adjust the model's weights through backpropagation—a crucial step for learning. We use the \texttt{AdamW} optimizer to fine-tune the model's weights, ensuring that the model gradually minimizes the loss and improves its performance over time.
+
+\subsection{Evaluation} The evaluation method assesses how well the model performs on a test dataset by calculating key metrics such as accuracy, precision, recall, and F1-score. We use tools like classification reports and confusion matrices to gain a detailed understanding of the model's strengths and areas for improvement.
+
+\subsection{Iterations} In our initial attempt, we used logistic regression for bug classification and achieved only about 30\% accuracy. We realized that logistic regression struggles with the high-dimensional embeddings provided by RoBERTa and doesn't handle overlapping boundaries well—such as when multiple assignees are solving similar bugs—leading to incorrect classifications. These issues limited our ability to improve accuracy. Finally, we switched to using \texttt{RobertaForSequenceClassification} as our base model. This proved to be a much better choice, overcoming the limitations of logistic regression and significantly boosting the model's accuracy.
 
 \section*{Results}
 \subsection*{All issues}
