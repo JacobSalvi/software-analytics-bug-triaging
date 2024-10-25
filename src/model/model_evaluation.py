@@ -16,16 +16,6 @@ def model_evaluation(only_recent_issues, use_gpu: bool = True, batch_size: int =
     except Exception as e:
         print(f"Evaluation failed: {e}")
 
-def model_evaluation(only_recent_issues, use_gpu: bool = True, batch_size: int = 16,  epochs: int = 5, lr: float = 2e-5) -> float:
-    models_dir = get_chosen_model_dir(only_recent_issues)
-    predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
-    predictor.load_models()
-    try:
-        test_df = Database.get_test_set(get_chosen_train_set(only_recent_issues))
-        accuracy = predictor.evaluate(test_df)
-        return accuracy
-    except Exception as e:
-        print(f"Evaluation failed: {e}")
 
 def print_statistics(results):
     accuracy = results.get("accuracy", 0) * 100
