@@ -1,0 +1,5 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PYG{n}{base\PYGZus{}url} \PYG{o}{=} \PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{https://api.github.com/repos/microsoft/vscode}\PYG{l+s+s2}{\PYGZdq{}}
+\PYG{n}{url} \PYG{o}{=} \PYG{l+s+sa}{f}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+si}{\PYGZob{}}\PYG{n}{base\PYGZus{}url}\PYG{l+s+si}{\PYGZcb{}}\PYG{l+s+s2}{/issues?state=closed\PYGZam{}page=}\PYG{l+s+si}{\PYGZob{}}\PYG{n}{current\PYGZus{}page}\PYG{l+s+si}{\PYGZcb{}}\PYG{l+s+s2}{\PYGZam{}per\PYGZus{}page=100\PYGZam{}direction=asc}\PYG{l+s+s2}{\PYGZdq{}}
+\PYG{n}{response} \PYG{o}{=} \PYG{n}{requests}\PYG{o}{.}\PYG{n}{request}\PYG{p}{(}\PYG{l+s+s2}{\PYGZdq{}}\PYG{l+s+s2}{GET}\PYG{l+s+s2}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{url}\PYG{p}{,} \PYG{n}{headers}\PYG{o}{=}\PYG{n}{headers}\PYG{p}{,} \PYG{n}{data}\PYG{o}{=}\PYG{n}{payload}\PYG{p}{)}
+\end{Verbatim}

@@ -1,19 +1,17 @@
 import argparse
-from pathlib import Path
-
 from src.model.Predictor import Predictor
-from src.utils import utils
+from src.model.model_utils import add_default_args, get_chosen_model_dir, get_chosen_train_set
 
 
-def model_train(models_dir: Path = None, use_gpu: bool = True, batch_size: int = 256):
-    predictor = Predictor(models_dir, use_gpu, batch_size)
-    predictor.train()
+def model_train(only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16, epochs: int = 5, lr: float = 2e-5):
+    print(f"Training model with only recent issues: {only_recent_issues}")
+    models_dir = get_chosen_model_dir(only_recent_issues)
+    predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
+    df = get_chosen_train_set(only_recent_issues)
+    predictor.train(df)
 
 if __name__ == '__main__':
-
     argument_parser = argparse.ArgumentParser("Trainer")
-    argument_parser.add_argument("--models_dir",type=Path, default=utils.get_model_dir(), help="Path to the models directory")
-    argument_parser.add_argument("--use_gpu", default=True, help="Use GPU for prediction")
-    argument_parser.add_argument("--batch_size", default=True, help="Define the batch size for training")
+    argument_parser = add_default_args(argument_parser)
     args = argument_parser.parse_args()
     model_train(**vars(args))

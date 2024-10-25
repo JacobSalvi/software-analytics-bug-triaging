@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8\relax}]
+\PYG{n}{Github}\PYG{p}{(}\PYG{n}{auth}\PYG{o}{=}\PYG{n}{auth}\PYG{p}{,} \PYG{n}{per\PYGZus{}page}\PYG{o}{=}\PYG{l+m+mi}{100}\PYG{p}{)}
+\end{Verbatim}

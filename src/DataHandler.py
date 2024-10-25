@@ -1,3 +1,4 @@
+#ORRECT
 import json
 import os
 import tarfile
@@ -9,22 +10,32 @@ from pandas import DataFrame
 from sympy import false
 
 from src.processing.issues_processing import process_data
+from src.utils import utils
+from src.utils.utils import compress_file_to_tar_gz
 
 
 class DataHandler:
-    PARSED_TAR_GZ_FILE_PATH = Path(__file__).parent / '../data/cleaned_parsed_issues.tar.gz'
-    TAR_GZ_FILE_1 = Path(__file__).parent / '../data/raw_parsed_issues_1.tar.gz'
-    TAR_GZ_FILE_2 = Path(__file__).parent / '../data/raw_parsed_issues_2.tar.gz'
+    PARSED_TAR_GZ_FILE_PATH = utils.data_dir().joinpath("cleaned_parsed_issues.tar.gz")
+    TAR_GZ_FILE_1 = utils.data_dir().joinpath("raw_parsed_issues_1.tar.gz")
+    TAR_GZ_FILE_2 = utils.data_dir().joinpath("raw_parsed_issues_2.tar.gz")
 
-    COMMITS = Path(__file__).parents[1].joinpath('data/commits_per_user.csv')
+    COMMITS = utils.data_dir().joinpath("commits_per_user.csv")
 
     @staticmethod
     def get_commits() -> DataFrame:
-        return pd.read_csv(DataHandler.COMMITS)
+        return pd.read_csv(DataHandler.COMMITS, header=None)
 
     @staticmethod
     def get_raw() -> list:
         combined_data = []
+
+        if not Path(DataHandler.TAR_GZ_FILE_1).exists():
+            raise FileNotFoundError(f"The file {DataHandler.TAR_GZ_FILE_1.name} does not exist, "
+                                    f"please execute the scraper first issue_scraper.py and or data_splitter.py")
+
+        if not Path(DataHandler.TAR_GZ_FILE_2).exists():
+            raise FileNotFoundError(f"The file {DataHandler.TAR_GZ_FILE_2.name} does not exist, "
+                                    f"please execute the scraper first issue_scraper.py and or data_splitter.py")
 
         combined_data.extend(
             DataHandler.extract_json_from_tar(DataHandler.TAR_GZ_FILE_1))
@@ -68,7 +79,7 @@ class DataHandler:
             df.to_csv(csv_buffer, index=False)
             csv_buffer.seek(0)
 
-            DataHandler.compress_file_to_tar_gz(
+            compress_file_to_tar_gz(
                 DataHandler.PARSED_TAR_GZ_FILE_PATH,
                 csv_buffer,
                 'cleaned_parsed_issues.csv'
@@ -86,17 +97,8 @@ class DataHandler:
         raise FileNotFoundError("No CSV file found in the tar.gz archive.")
 
 
-    @staticmethod
-    def compress_file_to_tar_gz(output_filename, file_obj, file_name):
-        with tarfile.open(output_filename, "w:gz") as tar:
-            tarinfo = tarfile.TarInfo(name=file_name)
-            file_obj.seek(0, io.SEEK_END)
-            tarinfo.size = file_obj.tell()
-            file_obj.seek(0)
-            tar.addfile(tarinfo, file_obj)
-
-        return output_filename
-
-
 if __name__ == '__main__':
-    DataHandler.get_parsed(True)
+    try:
+        DataHandler.get_parsed(True)
+    except FileNotFoundError as e:
+        print(e)

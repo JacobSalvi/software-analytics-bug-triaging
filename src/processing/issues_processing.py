@@ -7,6 +7,7 @@ import pandas as pd
 import demoji
 import swifter
 import nltk
+from marko.md_renderer import MarkdownRenderer
 from nltk.data import find
 from nltk.stem import WordNetLemmatizer
 import unicodedata
@@ -14,9 +15,28 @@ import contractions
 import marko
 from marko.inline import InlineHTML
 from marko.block import  List
+
 from src.processing.assignees_processing import filter_assignee_data
 from src.utils import utils
 
+def download_necessary_nltk_data():
+    try:
+        find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
+        print("'punkt' downloaded")
+
+    try:
+        find('corpora/stopwords')
+    except LookupError:
+        nltk.download('stopwords')
+        print("'stopwords' downloaded")
+
+    try:
+        find('corpora/wordnet')
+    except LookupError:
+        nltk.download('wordnet')
+        print("'wordnet' downloaded")
 
 
 LEMMATIZER = WordNetLemmatizer()
@@ -32,14 +52,15 @@ NUMBERS_REGEX = re.compile(r'\d+')
 NON_WORD_REGEX = re.compile(r'[^\w\s]')
 MODULES_REGEX = re.compile(r'(\w+\.)+\w')
 
+
 class MdRenderer(marko.md_renderer.MarkdownRenderer):
     def render_emphasis(self, element: marko.inline.Emphasis) -> str:
         return f" *{self.render_children(element)}* "
 
     def render_strong_emphasis(self, element: marko.inline.StrongEmphasis) -> str:
         return f" **{self.render_children(element)}** "
-    
-        
+
+
 def standardize_string(text: AnyStr) -> AnyStr:
     text = demoji.replace(text, repl="")
     text = re.sub(HTML_TAGS_REGEX, '', text)
@@ -57,17 +78,19 @@ def standardize_string(text: AnyStr) -> AnyStr:
     text = ''.join(
         c for c in unicodedata.normalize('NFD', text)
         if unicodedata.category(c) != 'Mn'
-    )   
+    )
     tokens: List[AnyStr] = text.split(" ")
     translation = str.maketrans('', '', string.punctuation)
-    tokens = list(map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(MODULES_REGEX, el) else el.translate(translation),
-                 filter(lambda token: len(token) <= 40, tokens)))
+    tokens = list(
+        map(lambda el: el if el.lower() in ["c#", "f#"] or re.match(MODULES_REGEX, el) else el.translate(translation),
+            filter(lambda token: len(token) <= 40, tokens)))
     text = " ".join(tokens)
     tokenized_text = nltk.word_tokenize(text)
     words = [word for word in tokenized_text if word not in STOPWORDS]
     lemmatized_words = [LEMMATIZER.lemmatize(word) for word in words]
     return ' '.join(lemmatized_words)
-    
+
+
 def download_necessary_nltk_data():
     try:
         find('tokenizers/punkt')
@@ -121,11 +144,11 @@ def parse_markdown(text: AnyStr, md_parser=None, renderer=None) -> AnyStr:
                 pass
 
         return renderer.render(ast)
-    
+
     except Exception as e:
-        print(f"Exception: {e}")  
-        print(f"Problem: \n {text}")  
-        return ""  
+        print(f"Exception: {e}")
+        print(f"Problem: \n {text}")
+        return ""
 
 
 def remove_pull_request(df: pd.DataFrame) -> pd.DataFrame:
@@ -137,10 +160,12 @@ def columns_parsing(df: pd.DataFrame) -> pd.DataFrame:
     # swifter to parallelize the process
     df['body'] = df['body'].swifter.apply(lambda text: parse_markdown(text, md_parser, renderer))
     df['title'] = df['title'].swifter.apply(lambda text: parse_markdown(text, md_parser, renderer))
+    df['body'] = df['body'].fillna('').apply(lambda x: x.strip())
+    df['title'] = df['title'].fillna('').apply(lambda x: x.strip())
     return df
 
 def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
-    return df.loc[:, ['id','number', 'url', 'title', 'body','assignee', "labels"]]
+    return df.loc[:, ['id', 'number', 'url', 'title', 'body', 'assignee', "labels"]]
 
 def store_processed_data(df: pd.DataFrame, output_path: Path):
     df.to_csv(output_path, index=False)
@@ -169,7 +194,7 @@ def main():
     parser = argparse.ArgumentParser("Clean up issues")
     parser.add_argument("--file", type=Path, required=True, help="Path to the raw json data")
     parser.add_argument("--output", default=utils.data_dir().joinpath("cleaned_parsed_issues.csv"),
-                        type=Path, required=False,  help="Path to the output json data")
+                        type=Path, required=False, help="Path to the output json data")
     args = parser.parse_args()
     process_input(args.file, args.output)
 
