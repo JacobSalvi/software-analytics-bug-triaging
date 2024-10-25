@@ -54,7 +54,6 @@ issues_to_keep = [issue for issue in issues if issue["number"]
 That said, it seems that the github api itself has a small bug. Page 1921 had an out of place issue.\newpage This page contained issues numbered as [205001, 205002, 205003, 230000, 205004, ...], the obvious outlier was causing issues by triggering an early termination.\\
 We saved all of the issues data as received in a json file to be used for the preprocessing. Having all the raw data allowed us to study which part of the data was useful without having to fetch it again.\\
 
-We also saved the number of commits per user, but limiting our search to the commits in the 'main' branch.
 \subsection*{Commits collections}
 We extracted commits from the \textbf{main branch} using the GitHub API. Attempting to extract commits from \textbf{all branches} proved challenging due to the high number of commits and GitHub API rate limits. To overcome this, we utilized the \texttt{git log} command to retrieve all commits locally. However, mapping these commits to usernames was difficult because many commits lacked author names and email addresses. We considered fetching usernames by commit SHA through the API, but the rate limits again restricted this method. Consequently, extracting commits from all branches was limited by API constraints and incomplete author information.
 
@@ -63,45 +62,35 @@ We extracted commits from the \textbf{main branch} using the GitHub API. Attempt
 \section*{Pre processing}
 
 The data had to be pre-processed before being given to the model for training.  
-Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.  
-The title and body required the most preprocessing, given that they contain the bulk of the text.  
-From the raw data we obtained, we first removed pull requests.  
-Given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.  
-Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.  
+Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.\\ 
+The title and body required the most preprocessing, given that they contain the bulk of the text.  \\
+From the raw data we obtained, we first removed the issue pertaining to pull requests.\\
+Then, given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.\\
+Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.\\
 The main parts that have been modified then are headings, paragraphs, and lists.
 
 All text was converted to lowercase, and contractions were expanded to standardize word forms. Emojis and special characters were removed to decrease noise in the data, and any residual URLs and email addresses were eliminated. Mentions and hashtags were removed as well. We also normalized whitespace by collapsing multiple spaces into a single space, and we removed the diacritics.  
-The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.  
+The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.\\ 
 We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
 
-\section*{Pre processing}
-The data had to be pre-processed before being given to the model for training.
-Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.
-The title and body required the most preprocessing, given that they contain the bulk of the text.
-From the raw data we obtained, we first removed pull requests.
-Given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.
-Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.
-The main parts that have been modified then are headings, paragraphs, and lists.
 
-All text was converted to lowercase, and contractions were expanded to standardize word forms. Emojis and special characters were removed to decrease noise in the data, and any residual URLs and email addresses were eliminated. Mentions and hashtags were removed as well. We also normalized whitespace by collapsing multiple spaces into a single space, and we removed the diacritics.
-The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.
-We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
+\section*{Predictor} We built our predictor using the base \textbf{RoBERTa} model initially, and the \textbf{RobertaForSequenceClassification} afterwards, which has up to 125 million parameters. With 128 thousand documents and 78 different labels, RoBERTa was more than capable of handling our needs with plenty of room to spare.
 
-\section*{Predictor} We built our predictor using the base RoBERTa model, which has up to 125 million parameters. With 128 thousand documents and 78 different labels, RoBERTa was more than capable of handling our needs with plenty of room to spare.
+\subsection*{Predictor Variables and Corpus} During the development of our model, we experimented with various predictor variables to determine the most effective ones for predicting assignees. Initially, we included seven columns during preprocessing but soon narrowed it down to four key features: \texttt{title}, \texttt{body}, \texttt{labels}, and \texttt{assignee}.
 
-\subsection{Predictor Variables and Corpus} During the development of our model, we experimented with various predictor variables to determine the most effective ones for predicting assignees. Initially, we included seven columns during preprocessing but soon narrowed it down to four key features: \texttt{title}, \texttt{body}, \texttt{labels}, and \texttt{assignee}.
+The \texttt{title} and \texttt{body} were essential as they contain the core information about each issue, providing the necessary context for the model to understand the problem.
 
-The \texttt{title} and \texttt{body} were essential as they contain the core information about each issue, providing the necessary context for the model to understand the problem. Including \texttt{labels} helped categorize issues, allowing the model to associate specific types of issues with relevant assignees. However, we recognized that newer issues might lack labels, which could impact prediction accuracy.
+After several iterations of refinement  of our preprocessing steps, we decided to incorporate issue \textbf{labels} into the training corpus. We believed that users are likely to work on similar issues and thus be assigned tasks with corresponding labels. Nonetheless, the absence of labels in newer issues presented a challenge for maintaining consistent prediction performance.
 
-After several iterations and refining our preprocessing steps, we decided to incorporate issue labels into the training corpus. We believed that users are likely to work on similar issues and thus be assigned tasks with corresponding labels. Nonetheless, the absence of labels in newer issues presented a challenge for maintaining consistent prediction performance.
+\subsection*{Embedding} Our Predictor uses a \texttt{LabelEncoder} to convert assignee IDs into numerical labels, facilitating their use in classification tasks and allowing for easy retrieval of user information in the following steps. \\
+The core of our model is the RoBERTa-based sequence classification setup, which we configured with the appropriate number of output labels based on our unique assignees.\\
+ RoBERTa's strong language understanding helps the model identify patterns and relationships in the text, enabling it to predict assignees accurately.
 
-\subsection{Embedding} Our Predictor uses a \texttt{LabelEncoder} to convert assignee IDs into numerical labels, facilitating their use in classification tasks. The core of our model is the RoBERTa-based sequence classification setup, which we configured with the appropriate number of output labels based on our unique assignees. We opted to use just the assignee \texttt{id} since it's already a number, eliminating the need for any special encoding and allowing us to easily map it back to the assignee's name. RoBERTa's strong language understanding helps the model identify patterns and relationships in the text, enabling it to predict assignees accurately.
+\subsection*{Training} Training the model involves running through the dataset multiple times, known as epochs. In each epoch, the model processes batches of data, makes predictions, and calculates loss values. These loss values are then used to adjust the model's weights through backpropagation—a crucial step for learning. We use the \texttt{AdamW} optimizer to fine-tune the model's weights, ensuring that the model gradually minimizes the loss and improves its performance over time.
 
-\subsection{Training} Training the model involves running through the dataset multiple times, known as epochs. In each epoch, the model processes batches of data, makes predictions, and calculates loss values. These loss values are then used to adjust the model's weights through backpropagation—a crucial step for learning. We use the \texttt{AdamW} optimizer to fine-tune the model's weights, ensuring that the model gradually minimizes the loss and improves its performance over time.
+\subsection*{Evaluation} The evaluation method assesses how well the model performs on a test dataset by calculating key metrics such as accuracy, precision, recall, and F1-score. We use tools like classification reports and confusion matrices to gain a detailed understanding of the model's strengths and areas for improvement.
 
-\subsection{Evaluation} The evaluation method assesses how well the model performs on a test dataset by calculating key metrics such as accuracy, precision, recall, and F1-score. We use tools like classification reports and confusion matrices to gain a detailed understanding of the model's strengths and areas for improvement.
-
-\subsection{Iterations} In our initial attempt, we used logistic regression for bug classification and achieved only about 30\% accuracy. We realized that logistic regression struggles with the high-dimensional embeddings provided by RoBERTa and doesn't handle overlapping boundaries well—such as when multiple assignees are solving similar bugs—leading to incorrect classifications. These issues limited our ability to improve accuracy. Finally, we switched to using \texttt{RobertaForSequenceClassification} as our base model. This proved to be a much better choice, overcoming the limitations of logistic regression and significantly boosting the model's accuracy.
+\subsection*{Iterations} In our initial attempt, we used logistic regression for bug classification and achieved only about 30\% accuracy. We realized that logistic regression struggles with the high-dimensional embeddings provided by RoBERTa and doesn't handle overlapping boundaries well—such as when multiple assignees are solving similar bugs—leading to incorrect classifications. These issues limited our ability to improve accuracy. Finally, we switched to using \texttt{RobertaForSequenceClassification} as our base model. This proved to be a much better choice, overcoming the limitations of logistic regression and significantly boosting the model's accuracy.
 
 \section*{Results}
 \subsection*{All issues}
@@ -167,6 +156,8 @@ This result is slightly surprising since we expected a sharper correlation betwe
 
 \subsection*{Recent issues}
 Limiting our training to recent issues, the model was significantly faster to train and we achieved an accuracy of roughly \textbf{ 57\%}.\\
+This results was slightly puzzling given that we expected the model to do better on only recent issues since these should be more relevant.\\
+We assume that the sheer amount of information obtained using all of the issues offset any advantage that limiting the training to recent issues might give.\\
 The correlation between precision and number of prediction is slightly better at 0.48, but it is still weak.\\
 The correlation between recall and predictions is 0.77 which give quite a strong correlation.
 
@@ -214,8 +205,20 @@ The correlation between recall and predictions is 0.77 which give quite a strong
     \end{tabular}
 \end{table}
 
+\subsection*{Clusters}
+We thought it could have been interesting to see how the issues and assignee are clustered.\\
+From the following image can be observed that the issues form quite well defined and disjointed clusters around their assigned Assignee.\\
+It would thus be natural to attempt to classify new documents based on these clusters to assign them to a user.\\
+This information can be used to validate our results and potentially even to refine the model further.
+\begin{table}[H]
+	\centering
+	\caption{Clustering of issues in relation to assignees}
+	\includegraphics[width=\textwidth]{plot.png}
+\end{table}
+
 \section*{Interface}
 We included a simple terminal-based interface to query the top five most likely assignee given an issue number.\\
+We opted for this kind of interface instead of a web based approach since this can easily be run on the server but still allows for a degree of interaction.
 \includegraphics[width=\textwidth]{./tui.png}
 
 To run it is sufficient to run the following code, given that the python environment is set up as described in the README.
@@ -224,8 +227,8 @@ python3 src/tui/tui.py
 \end{minted}
 
 \section*{Conclusion}
-In the project we had the chance of developing a tool for automated bug triaging leveraging using machine learning.\\
-Developing this tool we came to appreciate both the strength of such an approach to solve this kind of problem and the challenges faced in developing it.\\
+In the project we had the chance of developing a tool for automated bug triaging leveraging machine learning.\\
+Developing this tool we came to appreciate both the strength of such an approach to solve this kind of problems and the challenges faced in developing it.\\
 We also appreciated doing this kind of work in a quite realistic context, given that the vscode repository was used, and can picture many practical applications of similar techniques to solve similar challenges in industry.\\
 It is also our opinion that we achieved satisfactory results in terms of accuracy.
 
