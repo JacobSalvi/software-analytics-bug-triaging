@@ -1,5 +1,7 @@
 from pathlib import Path
-from typing import List, Callable
+from typing import List, Callable, Tuple
+
+import argparse
 import numpy as np
 import torch
 from torch.optim import AdamW
@@ -12,9 +14,9 @@ from tqdm import tqdm
 
 from src.Database import Database
 from src.utils import utils
-from src.utils.utils import remove_all_files_and_subdirectories_in_folder, get_model_dir, get_models_recenet_dir
+from src.utils.utils import remove_all_files_and_subdirectories_in_folder, get_model_dir, get_models_recent_dir
 
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 EPOCHS = 5
 LEARNING_RATE = 2e-5
 
@@ -45,9 +47,7 @@ class Predictor:
         self.EPOCHS = epochs
         self.LEARNING_RATE = learning_rate
         self.BATCH_SIZE = batch_size
-
         self.model_dir = model_dir
-        self.model_dir.mkdir(exist_ok=True)
         self.label_encoder_path = self.model_dir.joinpath('label_encoder.joblib')
         self.tokenizer_path = self.model_dir.joinpath('tokenizer')
         self.roberta_model_path = self.model_dir.joinpath('roberta-model')
@@ -191,20 +191,61 @@ class Predictor:
         return accuracy
 
 
+    def get_data_embeddings(self, data_df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
+        self.load_models()
+        self.model.config.output_hidden_states = True
+        corpus = get_corpus(data_df)
+        preprocessed_corpus = [preprocess_text(text) for text in corpus]
+        labels = Database.extract_assignee_ids(data_df)
+        encoded_labels = self.label_encoder.transform(labels)
+
+        self.model.eval()
+        embeddings = []
+
+        with torch.no_grad():
+            for i in tqdm(range(0, len(preprocessed_corpus), self.BATCH_SIZE), desc="Generating Embeddings"):
+                batch_texts = preprocessed_corpus[i:i + self.BATCH_SIZE]
+                inputs = self.tokenize(batch_texts)
+                outputs = self.model(**inputs)
+
+
+                last_hidden_states = outputs.hidden_states[-1]
+                batch_embeddings = last_hidden_states.mean(dim=1).cpu().numpy()
+                embeddings.append(batch_embeddings)
+
+        embeddings = np.vstack(embeddings)
+        labels = self.label_encoder.inverse_transform(encoded_labels).tolist()
+
+        print(f"Generated embeddings with shape: {embeddings.shape}")
+        return embeddings, labels
+
 
 if __name__ == '__main__':
+    argparse = argparse.ArgumentParser("Evaluation")
+    argparse.add_argument("--sample_run", default=False, type=bool)
+    args = argparse.parse_args()
+
+
     models_dir = get_model_dir()
     predictor_all = Predictor(models_dir)
-    df = Database.get_train_set()
-    predictor_all.train(df)
-    test_df = Database.get_test_set()
-    accuracy = predictor_all.evaluate(test_df)
+    train_all = Database.get_train_set()
+    if args.sample_run:
+        train_all = train_all.sample(n=1000, random_state=42)
+
+    predictor_all.train(train_all)
+    test_df_all = Database.get_test_set(train_all)
+    accuracy = predictor_all.evaluate(test_df_all)
     print(f"Test Accuracy predictor all: {accuracy * 100:.2f}%")
 
-    models_dir = get_models_recenet_dir()
+
+    models_dir = get_models_recent_dir()
     predictor_recent = Predictor(models_dir)
-    predictor_recent.train(df)
-    accuracy = predictor_recent.evaluate(test_df)
+    train_recent = Database.get_recent_instances()
+    if args.sample_run:
+        train_recent = train_recent.sample(n=1000, random_state=42)
+    predictor_recent.train(train_recent)
+    test_recent = Database.get_test_set(train_recent)
+    accuracy = predictor_recent.evaluate(test_recent)
     print(f"Test Accuracy predictor recent: {accuracy * 100:.2f}%")
 
 

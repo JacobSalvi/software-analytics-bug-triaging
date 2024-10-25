@@ -1,15 +1,16 @@
 import argparse
 from src.model.Predictor import Predictor
 from src.Database import Database
-from src.model.model_utils import add_default_args, get_chosen_model_dir
+from src.model.model_utils import add_default_args, get_chosen_model_dir, get_chosen_train_set
 
 
-def model_evaluation(evaluate_only_early, use_gpu: bool = True, batch_size: int = 16,  epochs: int = 5, lr: float = 2e-5) -> float:
-    models_dir = get_chosen_model_dir(evaluate_only_early)
+def model_evaluation(only_recent_issues, use_gpu: bool = True, batch_size: int = 16,  epochs: int = 5, lr: float = 2e-5) -> float:
+    models_dir = get_chosen_model_dir(only_recent_issues)
     predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
     predictor.load_models()
     try:
-        test_df = Database.get_test_set()
+
+        test_df = Database.get_test_set(get_chosen_train_set(only_recent_issues))
         accuracy = predictor.evaluate(test_df)
         return accuracy
     except Exception as e:

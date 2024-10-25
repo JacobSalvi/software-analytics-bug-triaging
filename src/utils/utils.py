@@ -5,19 +5,19 @@ from pathlib import Path
 
 
 def get_model_dir() -> Path:
-    return Path(__file__).parents[2].joinpath("models")
-
+    model_path = Path(__file__).parents[2].joinpath("models")
+    model_path.mkdir(parents=True, exist_ok=True)
+    return model_path
 
 def data_dir() -> Path:
-    return Path(__file__).parents[2].joinpath("data")
+    data_path = Path(__file__).parents[2].joinpath("data")
+    data_path.mkdir(parents=True, exist_ok=True)
+    return data_path
 
-
-def get_output() -> Path:
-    return Path(__file__).parents[2].joinpath('output')
-
-def get_models_recenet_dir() -> Path:
-    return Path(__file__).parents[2].joinpath('models_recent')
-
+def get_models_recent_dir() -> Path:
+    models_recent_path = Path(__file__).parents[2].joinpath('models_recent')
+    models_recent_path.mkdir(parents=True, exist_ok=True)
+    return models_recent_path
 
 def remove_all_files_and_subdirectories_in_folder(folder_path: Path):
     folder = Path(folder_path)

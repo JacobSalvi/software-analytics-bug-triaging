@@ -54,20 +54,24 @@ class Database:
         return filtered_df
 
     @staticmethod
-    def get_test_set() -> pd.DataFrame:
+    def get_test_set(df_train:pd.DataFrame) -> pd.DataFrame:
         df = Database.get_issues()
         test_set_df = df[
             (df['number'] >= 210001) &
             (df['number'] <= 220000)
         ]
         # Every assignee on the test set should appear at least once in the training set
-        train_assignees = set(Database.get_train_set()['assignee'].unique())
+        train_assignees = set(df_train['assignee'].unique())
         test_set_df = test_set_df[test_set_df['assignee'].isin(train_assignees)]
 
         if test_set_df.empty:
             raise ValueError("Empty test set")
+        test_set_df.dropna(subset=['assignee'], inplace=True)
+        # Remove rows where 'assignee' is an empty dictionary
+        test_set_df = Database.remove_row_with_empty_assignee(test_set_df)
 
         test_set_df.loc[:, 'labels'] = test_set_df['labels'].apply(Database.combine_labels)
+
         test_set_df.fillna('', inplace=True)
         return test_set_df
 
@@ -85,8 +89,17 @@ class Database:
         train_df = Database.post_process_set(train_df)
         return train_df
 
+
+    @staticmethod
+    def remove_row_with_empty_assignee(df: pd.DataFrame) -> pd.DataFrame:
+        df.dropna(subset=['assignee'])
+        df = df[df['assignee'].apply(lambda x: bool(x))]
+        df = df[df['assignee'] != '{}']
+        return df
+
     @staticmethod
     def post_process_set(df: pd.DataFrame) -> pd.DataFrame:
+        df = Database.remove_row_with_empty_assignee(df)
         df.dropna(subset=['assignee'], inplace=True)
         df.dropna(subset=['title', 'body'], how='all', inplace=True)
         df.loc[:, 'labels'] = df['labels'].apply(Database.combine_labels)
@@ -137,7 +150,8 @@ class Database:
 
 
 def main():
-    df = Database.get_test_set()
+    df_train = Database.get_train_set()
+    df = Database.get_test_set(df_train)
     pass
 
 if __name__ == '__main__':

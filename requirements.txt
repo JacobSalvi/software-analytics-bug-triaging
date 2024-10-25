@@ -16,3 +16,5 @@ tqdm~=4.66.5
 sympy~=1.13.3
 contractions~=0.1.73
 npyscreen~=4.10.5
+matplotlib~=3.9.2
+seaborn~=0.13.2

@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from src.Database import Database
 from src.model.Predictor import Predictor
-from src.model.model_utils import add_default_args, get_chosen_model_dir
+from src.model.model_utils import add_default_args, get_chosen_model_dir, get_chosen_train_set
 from src.utils import utils
 
 
@@ -10,7 +10,7 @@ def model_train(only_recent_issues: bool, use_gpu: bool = True, batch_size: int 
     print(f"Training model with only recent issues: {only_recent_issues}")
     models_dir = get_chosen_model_dir(only_recent_issues)
     predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
-    df = Database.get_train_set() if not only_recent_issues else Database.get_recent_instances()
+    df = get_chosen_train_set(only_recent_issues)
     predictor.train(df)
 
 if __name__ == '__main__':

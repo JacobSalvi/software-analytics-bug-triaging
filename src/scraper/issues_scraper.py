@@ -35,7 +35,7 @@ def get_issues_raw_request(token, start_page=0) -> List[Dict]:
 
             if current_page % 100 == 0:
                 print(f"Saving up to page {current_page}, number of issues {len(parsed_issues)}")
-                output = utils.get_output()
+                output = utils.data_dir()
                 parsed_json = output.joinpath(f"parsed_issues_{current_page}.json")
                 df = pd.DataFrame(parsed_issues)
                 df.to_json(parsed_json, orient='records', lines=True)
@@ -55,12 +55,9 @@ def get_issues_raw_request(token, start_page=0) -> List[Dict]:
 def main():
     argument_parser = argparse.ArgumentParser("Perform github VS-Code issues scraping")
     argument_parser.add_argument("--starting-page", dest="start_page",type=int, default=0)
-    argument_parser.add_argument("--data_dir", type=Path, default=utils.data_dir(), help="the directory to save the data")
     args = argument_parser.parse_args()
     starting_page = args.start_page
-    output = args.data_dir
-    if not output.is_dir():
-        output.mkdir()
+    output = utils.data_dir()
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
 

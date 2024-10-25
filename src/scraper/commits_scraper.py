@@ -4,18 +4,12 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 import os
-from pathlib import Path
 from src.Database import Database
 import ast
 from typing import List, Dict, AnyStr
 
 from src.utils import utils
 
-
-def get_output() -> Path:
-    return Path(__file__).parents[2].joinpath('data')
-
-# TODO: Get the number of commits for all branches, not just main one
 
 def fetch_commits_for_assignees(token: str, assignees: List[str]) -> Dict[str, int]:
     #gets the number of commits in main branch
@@ -62,32 +56,18 @@ def get_assignees_logins(assignees: List[AnyStr]) -> List[str]:
             print(assignee)        
     return logins
 
-# def get_commit_count(username, token):
-#     g = Github(token)
-#     repo = g.get_repo(f"microsoft/vscode")
-#     commit_count = 0
-#     for commit in repo.get_commits(author=username):
-#         commit_count += 1
-#         print(commit_count)
-
-#     return commit_count
 
 def main():
-    argument_parser = argparse.ArgumentParser("Perform github VS-Code commits scraping")
-    argument_parser.add_argument("--data_dir", type=Path, default=utils.data_dir(), help="the directory to save the data")
-    args = argument_parser.parse_args()
     df = Database.get_issues()
     logins = get_assignees_logins(get_assignees(df))
     load_dotenv()
     github_token = os.getenv("GITHUB_TOKEN")
     commits_per_user = fetch_commits_for_assignees(github_token, logins)
     series = pd.Series(commits_per_user)
-    output = args.data_dir
-    if not output.is_dir():
-        output.mkdir()
+    output = utils.data_dir()
     path = output.joinpath("commits_per_user.csv")
     series.to_csv(path, header=False)
-   
+
 if __name__ == '__main__':
     main()
 

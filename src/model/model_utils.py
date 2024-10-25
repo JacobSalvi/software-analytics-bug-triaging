@@ -1,5 +1,6 @@
 from email.parser import Parser
 
+from src.Database import Database
 from src.utils import utils
 
 
@@ -12,4 +13,8 @@ def add_default_args(parser):
     return parser
 
 def get_chosen_model_dir(only_recent_issues: bool):
-    return utils.get_models_recenet_dir() if only_recent_issues else utils.get_model_dir()
+    return utils.get_models_recent_dir() if only_recent_issues else utils.get_model_dir()
+
+
+def get_chosen_train_set(only_recent_issues: bool):
+    return Database.get_recent_instances() if only_recent_issues else Database.get_train_set()
