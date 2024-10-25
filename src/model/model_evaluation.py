@@ -12,7 +12,7 @@ def model_evaluation(only_recent_issues, use_gpu: bool = True, batch_size: int =
     try:
 
         test_df = Database.get_test_set(get_chosen_train_set(only_recent_issues))
-        accuracy = predictor.evaluate(test_df)
+        accuracy = predictor.evaluate(test_df).get("accuracy", 0)
         return accuracy
     except Exception as e:
         print(f"Evaluation failed: {e}")

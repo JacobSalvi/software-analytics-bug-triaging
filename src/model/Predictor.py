@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Dict, Any
 
 import argparse
 import numpy as np
@@ -169,7 +169,7 @@ class Predictor:
         return self.predict_assignees(number_id, top_n, Database.get_issues_by_number)
 
 
-    def evaluate(self, test_df: pd.DataFrame) -> float:
+    def evaluate(self, test_df: pd.DataFrame) -> Dict[str, Any]:
         self.load_models() # make sure is loaded before evaluating
 
         test_corpus = get_corpus(test_df)
