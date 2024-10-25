@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Dict, Any
 
 import argparse
 import numpy as np
@@ -169,7 +169,7 @@ class Predictor:
         return self.predict_assignees(number_id, top_n, Database.get_issues_by_number)
 
 
-    def evaluate(self, test_df: pd.DataFrame) -> float:
+    def evaluate(self, test_df: pd.DataFrame) -> Dict[str, Any]:
         self.load_models() # make sure is loaded before evaluating
 
         test_corpus = get_corpus(test_df)
@@ -248,7 +248,7 @@ class Predictor:
 
 if __name__ == '__main__':
     argparse = argparse.ArgumentParser("Evaluation")
-    argparse.add_argument("--sample_run", default=False, type=bool)
+    argparse.add_argument("--sample_run", default=True, type=bool)
     args = argparse.parse_args()
 
 
@@ -260,8 +260,8 @@ if __name__ == '__main__':
 
     predictor_all.train(train_all)
     test_df_all = Database.get_test_set(train_all)
-    accuracy = predictor_all.evaluate(test_df_all)
-    print(f"Test Accuracy predictor all: {accuracy * 100:.2f}%")
+    result = predictor_all.evaluate(test_df_all).get("accuracy", 0)
+    print(f"Test Accuracy predictor all: {result * 100:.2f}%")
 
 
     models_dir = get_models_recent_dir()
@@ -271,8 +271,8 @@ if __name__ == '__main__':
         train_recent = train_recent.sample(n=1000, random_state=42)
     predictor_recent.train(train_recent)
     test_recent = Database.get_test_set(train_recent)
-    accuracy = predictor_recent.evaluate(test_recent)
-    print(f"Test Accuracy predictor recent: {accuracy * 100:.2f}%")
+    result = predictor_recent.evaluate(test_recent).get("accuracy", 0)
+    print(f"Test Accuracy predictor recent: {result * 100:.2f}%")
 
 
 

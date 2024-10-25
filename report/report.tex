@@ -1,3 +1,4 @@
+
 \documentclass[tikz,10pt,fleqn]{article}
 \usepackage{amsmath}
 \usepackage{algorithm}
@@ -55,21 +56,24 @@ We saved all of the issues data as received in a json file to be used for the pr
 We also saved the number of commits per user, but limiting our search to the commits in the 'main' branch.
 
 
-\section*{Pre-processing}
-The data had to be pre-processed before being given to the model for training.\\ 
-Of all the information we retrieved in the previous step we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee' and the 'labels'.\\
-The title and body required the most pre-processing given that they contain the bulk of the text.\\
-Given that the bodies of the issues were written in markdown we used a markdown library to parse them.\\
- Some elements, such as html tags, links and images have been removed during the parsing. Code blocks have been preserved.\\
-The main parts that have been modified then are headings, paragraphs and lists.\\
-The text in these elements were converted to lowercase and had stop-words removed. Further we proceeded to use lemmatization instead of stemming as it preserves the meaning of the text thus maintaining the readability which is pivotal for the bug classification.\\
-Other elements, such as emojis, html tags, url tags and email tags have also been removed to decrease the noise in the data. Punctuations have also been removed, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names.\\
+\section*{Pre processing}
 
+The data had to be pre-processed before being given to the model for training.  
+Of all the information we retrieved in the previous step, we decided to keep only the 'title', 'body', 'id', 'number', 'url', 'assignee', and the 'labels'.  
+The title and body required the most preprocessing, given that they contain the bulk of the text.  
+From the raw data we obtained, we first removed pull requests.  
+Given that the bodies of the issues are written in Markdown, we have used a Markdown library to parse them.  
+Some elements, such as HTML tags, links, and images have been removed during the parsing. The code blocks are kept exactly as is.  
+The main parts that have been modified then are headings, paragraphs, and lists.
+
+All text was converted to lowercase, and contractions were expanded to standardize word forms. Emojis and special characters were removed to decrease noise in the data, and any residual URLs and email addresses were eliminated. Mentions and hashtags were removed as well. We also normalized whitespace by collapsing multiple spaces into a single space, and we removed the diacritics.  
+The text was then tokenized, punctuation was removed from tokens, with the exception of keeping the octothorpe in the word 'C\#' and 'F\#', since these are programming language names, and module names. Tokens longer than 40 characters were excluded. We removed common English stopwords and lemmatized the remaining words to their base forms.  
+We used lemmatization as we thought that reducing the word to its base form instead of stemming it would preserve more semantic meaning and yield better results in subsequent steps.
 
 \section*{Predictor}
 Even though we kept seven columns during preprocessing we actually used only four for training. These four are the 'title', 'body', 'labels' and 'assignee'.\\
 The reasoning behind using the 'title' and 'body' is pretty straightforward, these two columns contain the most information about the issue and are thus of the utter most importance. \\
-We need to pass the 'assignee' in order to predict future assignees, we only used the assignee 'id' since it being a number didn't require any particular encoding for the training and could easily be mapped back to an assignee name.\newpage
+We need to pass the 'assignee' in order to predict future assignees, we only used the assignee 'id' since it being a number didn't require any particular encoding for the training and could easily be mapped back to an assignee name.
 After a few attempts, interleaved with improvement of the preprocessing, we decided to include the issues labels in the corpus used to train the model. Our reasoning is based on the fact that an user is likely to work on similar issues, and therefore be assigned issues with similar labels.\\
 That said, particularly new issues might not have had any label assigned to them yet.\\
 In the first iteration we made use of logistic regression for the bug classification which led to an accuracy of 30\% . Upon further reading we realized that logistic regression struggles with high dimensional embeddings provided by Roberta further it also does not handle well overlapping boundaries like assignees solving similar bugs and leads to incorrect classification. These aspects limited the improvements that could be made to improve accuracy.\\
