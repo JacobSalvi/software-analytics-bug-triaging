@@ -1,3 +1,4 @@
+from torch.nn.functional import embedding
 from transformers import RobertaTokenizer, RobertaModel
 import torch
 import plotly.express as px
@@ -7,38 +8,14 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from nltk.corpus import stopwords
 from src.DataHandler import DataHandler
-
-
-def stop_removal(issues):
-    stop = stopwords.words('english')
-    issues['title'] = issues['title'].apply(lambda x : ' '.join([word for word in x.split() if word not in stop]))
-    return issues
-
-def load_issues() :
-    issues = DataHandler.get_parsed()
-    #issues = stopRemoval(issues)
-    bug_reports = issues["title"].head(1000).tolist()
-    return bug_reports
+from src.Database import Database
+from src.model.Predictor import Predictor
 
 
 def load_llm(bug_reports) :
-    model_name = "roberta-base"  
-    tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    model = RobertaModel.from_pretrained(model_name)
-
-    inputs = tokenizer(bug_reports, padding=True, truncation=True, return_tensors="pt")
-
-    with torch.no_grad():
-        outputs = model(**inputs)
-
-    
-        last_hidden_states = outputs.last_hidden_state  
-
-    
-        embeddings = torch.mean(last_hidden_states, dim=1) 
-
-    embeddings_np = embeddings.cpu().numpy()
-    return embeddings_np
+    predictor = Predictor()
+    embeddings, _ = predictor.get_data_embeddings(bug_reports)
+    return embeddings
 
 def clustering(radius, min_samples, embeddings_np):
     
@@ -60,7 +37,8 @@ def visualize(embeddings_np,cluster_labels,bug_reports):
         'y': reduced_embeddings[:, 1],
         'bug_report': bug_reports,
         'cluster': cluster_labels
-        })
+        }
+    )
 
     fig = px.scatter(
         df,
@@ -69,7 +47,7 @@ def visualize(embeddings_np,cluster_labels,bug_reports):
         color='cluster', 
         hover_data=['bug_report'],  
         title="Bug Report Clusters"
-        )
+    )
 
     fig.update_layout(
         legend_title_text='Clusters',
@@ -86,7 +64,7 @@ def visualize(embeddings_np,cluster_labels,bug_reports):
 
 
 def main():
-    bug_reports = load_issues()
+    bug_reports = Database.get_train_set()
     embeddings_np = load_llm(bug_reports)
     radius = float(input("Define the radius of clusters "))
     min_points = int(input("Define the minimum points for a cluster "))
