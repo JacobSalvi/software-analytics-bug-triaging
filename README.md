@@ -53,7 +53,7 @@ The programs assume the presence of three folder to store the data and the model
 To scrape issues from github, run the following command. it will store the scraped data in `/data/raw_parsed_issues.json`. 
 
 ```shell
-python3 ./src/scraper/issues_scraper.py
+python3 ./src/scraper/issues_scraper.py --starting_page 0 max_issue_number 1000
 ```
 For convenience, given that the scraping takes a significant amount of time, the data is already stored 
 in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_issues_2.tar.gz`.
@@ -61,7 +61,7 @@ in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_is
 ### Issue compressing 
 In order to store the raw scraped data on Github, we need both to split it and compress it.
 ```shell
-python3 ./src/utils/data_splitter.py
+python3 ./src/utils/data_splitter.py 
 ```
 The data is already divided and compressed in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_issues_2.tar.gz`.
 
