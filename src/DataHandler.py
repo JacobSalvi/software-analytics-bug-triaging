@@ -99,6 +99,6 @@ class DataHandler:
 
 if __name__ == '__main__':
     try:
-        DataHandler.get_parsed()
+        DataHandler.get_parsed(True)
     except FileNotFoundError as e:
         print(e)

@@ -1,9 +1,6 @@
 import argparse
-from pathlib import Path
-from src.Database import Database
 from src.model.Predictor import Predictor
 from src.model.model_utils import add_default_args, get_chosen_model_dir, get_chosen_train_set
-from src.utils import utils
 
 
 def model_train(only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16, epochs: int = 5, lr: float = 2e-5):

@@ -24,6 +24,7 @@ def get_user_names_from_user(users: list[str]) -> list[str]:
     return [user.get("login") for user in users]
 
 def predict_assignees(issue_id: int, top_n: int, only_recent_issues: bool, use_gpu: bool = True, batch_size: int = 16, epochs: int = 5, lr: float = 2e-5):
+    print(f"Predicting model with only recent issues: {only_recent_issues}")
     models_dir = get_chosen_model_dir(only_recent_issues)
     predictor = Predictor(models_dir, use_gpu, batch_size, epochs, lr)
     candidates = predictor.predict_assignees(issue_id, top_n)

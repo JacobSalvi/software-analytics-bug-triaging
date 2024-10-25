@@ -57,7 +57,7 @@ def get_issues_raw_request(token: str, start_page: int = 0, max_issue_number: in
 def main():
     argument_parser = argparse.ArgumentParser("Perform github VS-Code issues scraping")
     argument_parser.add_argument("--starting_page", dest="start_page",type=int, default=0, help="Starting page for scraping")
-    argument_parser.add_argument("--max_issue_number", type=int, default=2000, help="Max issue number to scrape")
+    argument_parser.add_argument("--max_issue_number", type=int, default=220000, help="Max issue number to scrape")
     args = argument_parser.parse_args()
     output = utils.data_dir()
     load_dotenv()

@@ -20,7 +20,7 @@ Install requirements.
 pip install -r requirements.txt
 ```
 
-Add project to the PythonPath.
+Add project to the PythonPath. This is necessary to import the modules. Without command ran from the README will not work.
 ```shell
 export PYTHONPATH="$PYTHONPATH:$PWD"
 ```
@@ -53,7 +53,7 @@ The programs assume the presence of three folder to store the data and the model
 To scrape issues from github, run the following command. it will store the scraped data in `/data/raw_parsed_issues.json`. 
 
 ```shell
-python3 ./src/scraper/issues_scraper.py --starting_page 0 max_issue_number 1000
+python3 ./src/scraper/issues_scraper.py --starting_page 0 --max_issue_number 220000
 ```
 For convenience, given that the scraping takes a significant amount of time, the data is already stored 
 in the repository in `/data/raw_parsed_issues_1.tar.gz` and `/data/raw_parsed_issues_2.tar.gz`.
@@ -70,7 +70,7 @@ To start scrape commits from github, run the following command.
 By default, it will store the scraped data in `/data/commits_per_user.csv`.
 
 ```shell
-python3 ./src/scraper/commits_scraper.py
+python3 ./src/scraper/commits_scraper.py --max_iterations_per_user 100
 ```
 The data is already stored in the repository in `/data/commits_per_user.csv` for convenience.
 
@@ -86,7 +86,7 @@ Also the pre-processed data is already stored in the repository in `/data/cleane
 
 ## Model
 Every subsequent script takes the following arguments:
-- `--only_recent_issues` : If True, only the recent issues will be used, default is `False`
+- `--only_recent_issues` : is a flag, that if present, will make the script use the recent issues data. default is `True`
 - `--use_gpu` : If True, the model will use the GPU. default is `True`
 - `--batch_size` : The batch size for the model, default is `16`
 - `--epochs` : The number of epochs for the model, default is `5`
@@ -96,7 +96,7 @@ Every subsequent script takes the following arguments:
 To train the model, run the following command. It will store the trained model in the `/models` directory.
 If the '--only_recent_issues' flag is passed the trained data will be saved in `/models_recnt`.
 ```shell
-python3 ./src/model/moderl_train.py --only_recent_issues False 
+python3 ./src/model/model_train.py --only_recent_issues
 ```
 The below command will train the model on the recent issues and all issues, and automatically test the accuracy of the models.
 ```shell
@@ -108,13 +108,13 @@ python3 ./src/model/Predictor.py
 ### Model evaluation
 To evaluate the model, run the following command. It will print the evaluation metrics.
 ```shell
-python3 ./src/model/model_evaluation.py --only_recent_issues False 
+python3 ./src/model/model_evaluation.py  
 ```
 ### Model prediction
 To predict the top 5 assignee for a given issue, run the following command. It will print the top 5 assignee.
 To be noted that '--issue_id' is the id of the issue and not the issue number.
 ```shell
-python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues False
+python3 ./src/model/model_predictor.py --issue_id 752417277 --top_n 5 --only_recent_issues
 ```
 ## UI 
 To run the UI, run the following command on the console (do not run it in an IDE).

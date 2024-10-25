@@ -65,7 +65,7 @@ def get_assignees_logins(assignees: List[AnyStr]) -> List[str]:
 
 def main():
     argument_parser = argparse.ArgumentParser("Perform github VS-Code commits scraping")
-    argument_parser.add_argument("--max_iterations_per_user", type=int, default=sys.maxsize, help="Max number of iterations to fetch commits, default is sys.maxsize")
+    argument_parser.add_argument("--max_iterations_per_user", type=int, default=60, help="Max number of iterations to fetch commits, default is sys.maxsize")
     args = argument_parser.parse_args()
     df = Database.get_issues()
     logins = get_assignees_logins(get_assignees(df))
