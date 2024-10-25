@@ -68,6 +68,7 @@ class Database:
             raise ValueError("Empty test set")
 
         test_set_df.loc[:, 'labels'] = test_set_df['labels'].apply(Database.combine_labels)
+        test_set_df.fillna('', inplace=True)
         return test_set_df
 
     @staticmethod
@@ -81,20 +82,27 @@ class Database:
         assignee_counts = train_set_df['assignee'].value_counts()
         assignees_to_keep = assignee_counts[assignee_counts > 5].index
         train_df = train_set_df[train_set_df['assignee'].isin(assignees_to_keep)]
-        train_df.dropna(subset=['title', 'body', 'assignee'], inplace=True)
-
-        train_df.loc[:, 'labels'] = train_df['labels'].apply(Database.combine_labels)
+        train_df = Database.post_process_set(train_df)
         return train_df
 
     @staticmethod
+    def post_process_set(df: pd.DataFrame) -> pd.DataFrame:
+        df.dropna(subset=['assignee'], inplace=True)
+        df.dropna(subset=['title', 'body'], how='all', inplace=True)
+        df.loc[:, 'labels'] = df['labels'].apply(Database.combine_labels)
+        df.fillna('', inplace=True)
+        return df
+
+    @staticmethod
     def get_recent_instances() -> pd.DataFrame:
-        df = Database.get_issues()
-        recent_instances_df = df[
-            (df['number'] >= 190000) &
-            (df['number'] <= 210000)
+        recent = Database.get_issues()
+        recent_instances_df = recent[
+            (recent['number'] >= 190000) &
+            (recent['number'] <= 210000)
         ]
         if recent_instances_df.empty:
             raise ValueError("Empty recent instances set")
+        recent_instances_df = Database.post_process_set(recent_instances_df)
         return recent_instances_df
 
     @staticmethod
@@ -120,7 +128,6 @@ class Database:
     def combine_labels(labels):
         if isinstance(labels, str):
             labels = ast.literal_eval(labels)
-
         if labels:
             combined_string = ' '.join(labels).upper()
         else:

@@ -89,8 +89,8 @@ Every subsequent script takes the following arguments:
 - `--only_recent_issues` : If True, only the recent issues will be used, default is `False`
 - `--use_gpu` : If True, the model will use the GPU. default is `True`
 - `--batch_size` : The batch size for the model, default is `16`
-- `--epochs` : The number of epochs for the model, default is `10`
-- `--lr` : The learning rate for the model, default is `0.001`
+- `--epochs` : The number of epochs for the model, default is `5`
+- `--lr` : The learning rate for the model, default is `2e-5`
 
 ### Model training 
 To train the model, run the following command. It will store the trained model in the `/models` directory.
@@ -98,6 +98,11 @@ If the '--only_recent_issues' flag is passed the trained data will be saved in `
 ```shell
 python3 ./src/model/moderl_train.py --only_recent_issues False 
 ```
+The below command will train the model on the recent issues and all issues, and automatically test the accuracy of the models.
+```shell
+python3 ./src/model/Predictor.py 
+```
+
 > :warning: If the batch size is set too high the model will not fit in the GPU memory and the training will fail. Adjust the batch size accordingly.
 
 ### Model evaluation

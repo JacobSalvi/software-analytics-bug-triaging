@@ -12,12 +12,30 @@ from tqdm import tqdm
 
 from src.Database import Database
 from src.utils import utils
-from src.utils.utils import remove_all_files_and_subdirectories_in_folder
-
+from src.utils.utils import remove_all_files_and_subdirectories_in_folder, get_model_dir, get_models_recenet_dir
 
 BATCH_SIZE = 16
 EPOCHS = 5
 LEARNING_RATE = 2e-5
+
+
+def get_corpus(train_df: pd.DataFrame) -> List[str]:
+    return (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
+
+
+def preprocess_text(text: str) -> str:
+    return text.lower().strip()
+
+
+def get_assignee_ids(train_df: pd.DataFrame) -> List[int]:
+    return Database.extract_assignee_ids(train_df)
+
+
+def get_query_corpus(row: pd.DataFrame) -> str:
+    row = row.fillna('')
+    query_corpus = row.iloc[0]['title'] + ' ' + row.iloc[0]['body'] + ' ' + row.iloc[0]['labels']
+    return preprocess_text(query_corpus)
+
 
 class Predictor:
     def __init__(self, model_dir: Path = utils.get_model_dir(), use_gpu: bool = True,
@@ -45,32 +63,23 @@ class Predictor:
         # torch.cuda.set_per_process_memory_fraction(0.9)
         pass
 
-    def preprocess_text(self, text: str) -> str:
-        return text.lower().strip()
-
-    def get_corpus(self, train_df: pd.DataFrame) -> List[str]:
-        return (train_df['title'] + ' ' + train_df['body'] + ' ' + train_df['labels']).tolist()
-
-    def get_assignee_ids(self, train_df: pd.DataFrame) -> List[int]:
-        return Database.extract_assignee_ids(train_df)
-
     def set_base_model(self, num_labels):
         self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         self.model = RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=num_labels)
         self.model.to(self.device)
-        print("Loaded standard tokenizer and RoBERTa")
+        print("Set standard tokenizer and ROBERTA")
 
     def train(self, train_df: pd.DataFrame):
         if self.model_dir.exists():
             remove_all_files_and_subdirectories_in_folder(self.model_dir)
-        corpus = self.get_corpus(train_df)
+        corpus = get_corpus(train_df)
 
         # Encode assignees
         assignee_ids = Database.extract_assignee_ids(train_df)
         labels = self.label_encoder.fit_transform(assignee_ids)
         num_labels = len(self.label_encoder.classes_)
 
-        # Now set up the model with the correct number of labels
+        # Set up the model with the correct number of labels
         self.set_base_model(num_labels)
 
         optimizer = AdamW(self.model.parameters(), lr=self.LEARNING_RATE)
@@ -80,16 +89,8 @@ class Predictor:
             epoch_loss = 0
             self.model.train()
             for texts, batch_labels in train_loader:
-                preprocessed_texts = [self.preprocess_text(text) for text in texts]
-                inputs = self.tokenizer(
-                    preprocessed_texts,
-                    return_tensors='pt',
-                    padding=True,
-                    truncation=True,
-                    max_length=512
-                )
-
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                preprocessed_texts = [preprocess_text(text) for text in texts]
+                inputs = self.tokenize(preprocessed_texts)
 
                 if not isinstance(batch_labels, torch.Tensor):
                     batch_labels = torch.tensor(batch_labels)
@@ -126,31 +127,32 @@ class Predictor:
             self.tokenizer = RobertaTokenizer.from_pretrained(self.tokenizer_path)
             self.model = RobertaForSequenceClassification.from_pretrained(self.roberta_model_path)
             self.model.to(self.device)
-            print("Loaded tokenizer and RoBERTa model")
+            print("Loaded tokenizer and ROBERTA model")
         else:
             raise FileNotFoundError("Tokenizer or RoBERTa model not found")
 
         print(f"Models loaded from {self.model_dir}")
 
-
-    def predict_assignees(self, issue_id: int, top_n: int = 5, getter: Callable[[int], pd.DataFrame] = Database.get_issues_by_id) -> List[str]:
-        self.load_models()
-        issue_df = getter(issue_id)
-
-        issue_df = issue_df.fillna('')
-        query_corpus = issue_df.iloc[0]['title'] + ' ' + issue_df.iloc[0]['body'] + ' ' + issue_df.iloc[0]['labels']
-        query_corpus = self.preprocess_text(query_corpus)
-
-        self.model.eval()
+    def tokenize(self, corpus: List[str]):
         inputs = self.tokenizer(
-            [query_corpus],
+            corpus,
             return_tensors='pt',
             padding=True,
             truncation=True,
             max_length=512
         )
-        # Move inputs to device
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        return {k: v.to(self.device) for k, v in inputs.items()}
+
+    def predict_assignees(self, issue_id: int, top_n: int = 5,
+                          getter: Callable[[int], pd.DataFrame] = Database.get_issues_by_id) -> List[str]:
+        self.load_models() # make sure is loaded before evaluating
+        issue_df = getter(issue_id)
+
+        query_corpus = get_query_corpus(issue_df)
+
+        self.model.eval()
+
+        inputs = self.tokenize([query_corpus])
 
         with torch.no_grad():
             outputs = self.model(**inputs)
@@ -160,39 +162,51 @@ class Predictor:
         probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
         top_indices = np.argsort(probs)[::-1][:top_n]
         assignee_ids = self.label_encoder.inverse_transform(top_indices)
-
         return assignee_ids.tolist()
 
     def predict_assignees_by_issue_number(self, number_id: int, top_n: int = 5):
         return self.predict_assignees(number_id, top_n, Database.get_issues_by_number)
 
-    def evaluate(self, test_df: pd.DataFrame) -> float:
-        self.load_models()
-        test_df["body"] = test_df["body"].fillna("")
-        test_texts = (test_df['title'] + ' ' + test_df['body'] + ' ' + test_df['labels']).tolist()
-        test_texts = [self.preprocess_text(text) for text in test_texts]
-        test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
 
+    def evaluate(self, test_df: pd.DataFrame) -> float:
+        self.load_models() # make sure is loaded before evaluating
+
+        test_corpus = get_corpus(test_df)
+        test_corpus = [preprocess_text(text) for text in test_corpus]
+
+        test_labels = self.label_encoder.transform(Database.extract_assignee_ids(test_df))
         self.model.eval()
         predictions = []
 
         # Tokenize and predict in batches
         with torch.no_grad():
-            for i in tqdm(range(0, len(test_texts), self.BATCH_SIZE), desc="Evaluating"):
-                batch_texts = test_texts[i:i + self.BATCH_SIZE]
-                inputs = self.tokenizer(
-                    batch_texts,
-                    return_tensors='pt',
-                    padding=True,
-                    truncation=True,
-                    max_length=512
-                )
-                # Move inputs to device
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
+            for i in tqdm(range(0, len(test_corpus), self.BATCH_SIZE), desc="Evaluating"):
+                batch_texts = test_corpus[i:i + self.BATCH_SIZE]
+                inputs = self.tokenize(batch_texts)
                 outputs = self.model(**inputs)
                 logits = outputs.logits
-                batch_predictions = torch.argmax(logits, dim=1).cpu().numpy()
-                predictions.extend(batch_predictions)
+                current_predictions = torch.argmax(logits, dim=1).cpu().numpy()
+                predictions.extend(current_predictions)
         accuracy = np.mean(np.array(predictions) == test_labels)
         return accuracy
+
+
+
+if __name__ == '__main__':
+    models_dir = get_model_dir()
+    predictor_all = Predictor(models_dir)
+    df = Database.get_train_set()
+    predictor_all.train(df)
+    test_df = Database.get_test_set()
+    accuracy = predictor_all.evaluate(test_df)
+    print(f"Test Accuracy predictor all: {accuracy * 100:.2f}%")
+
+    models_dir = get_models_recenet_dir()
+    predictor_recent = Predictor(models_dir)
+    predictor_recent.train(df)
+    accuracy = predictor_recent.evaluate(test_df)
+    print(f"Test Accuracy predictor recent: {accuracy * 100:.2f}%")
+
+
+
+
